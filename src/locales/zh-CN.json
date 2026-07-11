@@ -1,0 +1,25 @@
+{
+  "app": {
+    "title": "拧紧控制系统"
+  },
+  "menu": {
+    "workplace": "工作台",
+    "mission": "任务管理",
+    "workstation": "站点",
+    "analysis": "数据分析",
+    "device": "设备管理",
+    "integration": "系统集成"
+  },
+  "common": {
+    "underConstruction": "功能开发中",
+    "notFound": "页面不存在",
+    "backHome": "返回首页",
+    "expandSidebar": "展开侧边栏",
+    "collapseSidebar": "收起侧边栏",
+    "switchLanguage": "切换语言",
+    "themeLight": "亮色模式",
+    "themeDark": "暗色模式",
+    "themeSystem": "跟随系统",
+    "themeSwitch": "切换主题"
+  }
+}

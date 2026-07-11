@@ -1,0 +1,25 @@
+{
+  "app": {
+    "title": "Tightening Control System"
+  },
+  "menu": {
+    "workplace": "Workplace",
+    "mission": "Mission",
+    "workstation": "Workstation",
+    "analysis": "Analysis",
+    "device": "Devices",
+    "integration": "Integration"
+  },
+  "common": {
+    "underConstruction": "Under Development",
+    "notFound": "Page Not Found",
+    "backHome": "Back to Home",
+    "expandSidebar": "Expand Sidebar",
+    "collapseSidebar": "Collapse Sidebar",
+    "switchLanguage": "Switch Language",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "themeSwitch": "Switch Theme"
+  }
+}
