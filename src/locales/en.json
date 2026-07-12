@@ -20,6 +20,37 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeSystem": "System",
-    "themeSwitch": "Switch Theme"
+    "themeSwitch": "Switch Theme",
+    "close": "Close"
+  },
+  "device": {
+    "status": {
+      "ok": "Normal",
+      "error": "Error",
+      "warning": "Warning",
+      "offline": "Offline"
+    }
+  },
+  "server": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "unconfigured": "Unconfigured",
+    "connecting": "Connecting...",
+    "address": "Server Address",
+    "addressPlaceholder": "Enter server address",
+    "testConnection": "Test Connection",
+    "testing": "Testing...",
+    "testSuccess": "Connection Successful",
+    "testFailed": "Connection Failed",
+    "testFailedDetail": "Connection Failed: {reason}",
+    "saveFailed": "Save Failed",
+    "reconnectFailed": "Reconnect Failed",
+    "save": "Save",
+    "configureTitle": "Configure Server",
+    "disconnectTitle": "Server Connection Status",
+    "reason": "Reason",
+    "manualReconnect": "Reconnect",
+    "latency": "Latency",
+    "latencyValue": "{n}ms latency"
   }
 }

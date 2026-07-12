@@ -20,6 +20,37 @@
     "themeLight": "亮色模式",
     "themeDark": "暗色模式",
     "themeSystem": "跟随系统",
-    "themeSwitch": "切换主题"
+    "themeSwitch": "切换主题",
+    "close": "关闭"
+  },
+  "device": {
+    "status": {
+      "ok": "正常",
+      "error": "连接异常",
+      "warning": "部分异常",
+      "offline": "未配置"
+    }
+  },
+  "server": {
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "unconfigured": "未配置",
+    "connecting": "连接中...",
+    "address": "服务器地址",
+    "addressPlaceholder": "请输入服务器地址",
+    "testConnection": "测试连接",
+    "testing": "测试中...",
+    "testSuccess": "连接成功",
+    "testFailed": "连接失败",
+    "testFailedDetail": "连接失败：{reason}",
+    "saveFailed": "保存失败",
+    "reconnectFailed": "重连失败",
+    "save": "保存",
+    "configureTitle": "配置远程服务器",
+    "disconnectTitle": "服务器连接状态",
+    "reason": "断开原因",
+    "manualReconnect": "手动重连",
+    "latency": "延迟",
+    "latencyValue": "延迟 {n}ms"
   }
 }
