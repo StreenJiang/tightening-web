@@ -26,5 +26,5 @@ export function aggregateStatus(instances: DeviceInstance[]): DeviceStatus {
 }
 
 export function statusLabel(s: string): string {
-  return { ok: '正常', error: '连接异常', warning: '部分异常', offline: '未配置' }[s] ?? '未配置'
+  return { ok: 'device.status.ok', error: 'device.status.error', warning: 'device.status.warning', offline: 'device.status.offline' }[s] ?? 'device.status.offline'
 }
