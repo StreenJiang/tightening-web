@@ -19,11 +19,19 @@
   --color-status-offline: #d4d4d8;
   --color-status-ok: #16a34a;
   --color-status-error: #dc2626;
+  --color-status-warning: #f59e0b;
+  --color-modal-overlay: rgba(0, 0, 0, 0.45);
+
+  --color-status-offline-bg: rgba(212, 212, 216, 0.12);
+  --color-status-ok-bg: rgba(22, 163, 74, 0.12);
+  --color-status-error-bg: rgba(220, 38, 38, 0.12);
+  --color-status-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-border-subtle: rgba(228, 228, 231, 0.25);
 
   --sidebar-expanded: 220px;
   --sidebar-collapsed: 60px;
   --topbar-height: 56px;
-  --footer-height: 44px;
+  --footer-height: 52px;
 
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
@@ -56,6 +64,12 @@ html.dark {
   --color-footer-bg: #1c1c1f;
   --color-footer-border: #3f3f46;
   --color-status-offline: #52525b;
+  --color-status-warning: #fbbf24;
+  --color-modal-overlay: rgba(0, 0, 0, 0.6);
+
+  --color-status-offline-bg: rgba(82, 82, 91, 0.12);
+  --color-status-warning-bg: rgba(251, 191, 36, 0.12);
+  --color-border-subtle: rgba(63, 63, 70, 0.25);
 }
 
 *,

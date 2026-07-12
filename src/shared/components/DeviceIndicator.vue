@@ -1,22 +1,25 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { usePointerPress } from '@/shared/composables/usePointerPress'
+import { statusLabel } from '@/shared/types/device'
 
-defineProps<{ icon: string; label: string; status: 'offline' | 'ok' | 'error' }>()
+defineProps<{ icon: string; label: string; status: 'offline' | 'ok' | 'error' | 'warning' }>()
+defineEmits<{ click: [] }>()
 const { pressed, onDown, onUp } = usePointerPress()
 </script>
 
 <template>
   <button class="device-btn" :class="[`status-${status}`, { pressed }]"
-    :title="`${label}：${status === 'ok' ? '正常' : status === 'error' ? '连接异常' : '未配置'}`"
-    @pointerdown="onDown" @pointerup="onUp" @pointerleave="onUp">
+    :title="`${label}：${statusLabel(status)}`"
+    @pointerdown="onDown" @pointerup="onUp" @pointerleave="onUp"
+    @click="$emit('click')">
     <Icon :icon="icon" class="device-icon" />
   </button>
 </template>
 
 <style scoped>
 .device-btn {
-  width: 32px; height: 32px; min-height: 0; border-radius: 7px;
+  width: 44px; height: 44px; min-height: 0; border-radius: 7px;
   display: flex; align-items: center; justify-content: center;
   background: var(--color-surface);
   transition: background 0.1s, transform 0.1s;
@@ -26,5 +29,6 @@ const { pressed, onDown, onUp } = usePointerPress()
 .device-btn.status-offline .device-icon { color: var(--color-status-offline); }
 .device-btn.status-ok      .device-icon { color: var(--color-status-ok); }
 .device-btn.status-error   .device-icon { color: var(--color-status-error); }
-.device-icon { font-size: 20px; flex-shrink: 0; }
+.device-btn.status-warning .device-icon { color: var(--color-status-warning); }
+.device-icon { font-size: 22px; flex-shrink: 0; }
 </style>

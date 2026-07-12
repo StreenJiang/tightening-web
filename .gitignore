@@ -19,6 +19,7 @@ dist-ssr
 .DS_Store
 .codegraph/
 .cursor/
+.superpowers/
 *.suo
 *.ntvs*
 *.njsproj

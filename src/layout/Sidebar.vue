@@ -157,6 +157,7 @@ onUnmounted(() => {
   transition: width 0.2s ease;
   overflow: hidden;
   border-right: 1px solid var(--color-sidebar-border);
+  contain: layout style;
 }
 
 .sidebar.collapsed {

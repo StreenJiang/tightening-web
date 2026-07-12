@@ -38,5 +38,6 @@ import FooterBar from './FooterBar.vue'
   background: var(--color-bg);
   padding: 24px;
   min-height: 0;
+  contain: layout style;
 }
 </style>

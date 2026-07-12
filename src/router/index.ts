@@ -2,15 +2,13 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import MainLayout from '@/layout/MainLayout.vue'
 
-const placeholderPage = () => import('@/modules/ModulePlaceholderPage.vue')
-
 const MODULES = [
-  { path: 'workplace',    name: 'Workplace',    icon: 'mdi:view-dashboard' },
-  { path: 'mission',      name: 'Mission',      icon: 'mdi:clipboard-list' },
-  { path: 'workstation',  name: 'Workstation',  icon: 'mdi:monitor-screenshot' },
-  { path: 'analysis',     name: 'Analysis',     icon: 'mdi:chart-bar' },
-  { path: 'device',       name: 'Device',       icon: 'mdi:cog' },
-  { path: 'integration',  name: 'Integration',  icon: 'mdi:connection' },
+  { path: 'workplace',    name: 'Workplace',    icon: 'mdi:monitor-screenshot',      page: () => import('@/modules/WorkplacePage.vue') },
+  { path: 'mission',      name: 'Mission',      icon: 'mdi:clipboard-text-outline',   page: () => import('@/modules/MissionPage.vue') },
+  { path: 'workstation',  name: 'Workstation',  icon: 'mdi:worker',                   page: () => import('@/modules/WorkstationPage.vue') },
+  { path: 'analysis',     name: 'Analysis',     icon: 'mdi:chart-bar',                page: () => import('@/modules/AnalysisPage.vue') },
+  { path: 'device',       name: 'Device',       icon: 'mdi:cog',                      page: () => import('@/modules/DevicePage.vue') },
+  { path: 'integration',  name: 'Integration',  icon: 'mdi:connection',               page: () => import('@/modules/IntegrationPage.vue') },
 ]
 
 const routes: RouteRecordRaw[] = [
@@ -22,7 +20,7 @@ const routes: RouteRecordRaw[] = [
       path: m.path,
       name: m.name,
       meta: { titleKey: `menu.${m.path}`, icon: m.icon },
-      component: placeholderPage,
+      component: m.page,
     })),
   },
   {
