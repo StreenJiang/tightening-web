@@ -32,10 +32,10 @@
     }
   },
   "server": {
-    "connected": "Connected",
-    "disconnected": "Disconnected",
-    "unconfigured": "Unconfigured",
-    "connecting": "Connecting...",
+    "connected": "Remote Server Connected",
+    "disconnected": "Remote Server Disconnected",
+    "unconfigured": "Remote Server Unconfigured",
+    "connecting": "Remote Server Connecting...",
     "address": "Server Address",
     "addressPlaceholder": "Enter server address",
     "testConnection": "Test Connection",

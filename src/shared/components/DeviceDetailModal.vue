@@ -2,6 +2,8 @@
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { type DeviceGroup, aggregateStatus, statusLabel } from '@/shared/types/device'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 const props = defineProps<{
   visible: boolean
@@ -47,10 +49,10 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
               </span>
               <span v-if="device" class="modal-status-tag" :class="`tag-${aggStatus}`">
                 <span class="modal-status-dot" :class="`dot-${aggStatus}`"></span>
-                {{ statusLabel(aggStatus) }}
+                {{ t(statusLabel(aggStatus)) }}
               </span>
             </div>
-            <button ref="closeBtnRef" class="modal-close-btn" @click="handleClose" title="关闭">
+            <button ref="closeBtnRef" class="modal-close-btn" @click="handleClose" :title="t('common.close')">
               <Icon icon="mdi:close" class="modal-close-icon" />
             </button>
           </header>
@@ -59,7 +61,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
               <li v-for="inst in device.instances" :key="inst.name" class="instance-item">
                 <span class="instance-dot" :class="`dot-${inst.status}`"></span>
                 <span class="instance-name">{{ inst.name }}</span>
-                <span class="instance-status">{{ statusLabel(inst.status) }}</span>
+                <span class="instance-status">{{ t(statusLabel(inst.status)) }}</span>
               </li>
             </ul>
           </div>

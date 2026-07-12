@@ -6,8 +6,15 @@ import { useThemeStore } from '@/stores/theme'
 import IconButton from '@/shared/components/IconButton.vue'
 import MenuItem from '@/shared/components/MenuItem.vue'
 import type { ThemeMode } from '@/stores/theme'
+import ConnectionIndicator from '@/shared/components/ConnectionIndicator.vue'
+import ServerConfigModal from '@/shared/components/ServerConfigModal.vue'
+import ConnectionStatusModal from '@/shared/components/ConnectionStatusModal.vue'
+import { useServerConnectionStore } from '@/stores/serverConnection'
 
 const { t, locale } = useI18n()
+const conn = useServerConnectionStore()
+const configModalVisible = ref(false)
+const statusModalVisible = ref(false)
 const sidebar = useSidebarStore()
 const theme = useThemeStore()
 
@@ -24,9 +31,19 @@ function onDocClick(e: MouseEvent) {
 
 onMounted(() => document.addEventListener('click', onDocClick))
 onUnmounted(() => document.removeEventListener('click', onDocClick))
+onMounted(() => conn.fetchStatus())
 
 function toggleLocale() {
   locale.value = locale.value === 'zh-CN' ? 'en' : 'zh-CN'
+}
+
+function onConnClick() {
+  if (conn.status === 'unconfigured') {
+    configModalVisible.value = true
+  } else if (conn.status === 'disconnected') {
+    statusModalVisible.value = true
+  }
+  // connected — tooltip 已在 title 属性中处理，无需弹出
 }
 
 const localeLabel = computed(() => locale.value === 'zh-CN' ? 'EN' : '中')
@@ -77,6 +94,12 @@ const themeOptions: { mode: ThemeMode; key: string; icon: string }[] = [
         @click="sidebar.toggle()"
       />
       <span class="topbar-title">{{ t('app.title') }}</span>
+      <ConnectionIndicator
+        :status="conn.status"
+        :address="conn.address"
+        :latency="conn.latency ?? undefined"
+        @click="onConnClick"
+      />
     </div>
     <div class="topbar-right">
       <!-- 主题 -->
@@ -110,6 +133,8 @@ const themeOptions: { mode: ThemeMode; key: string; icon: string }[] = [
       <IconButton icon="mdi:account-circle" />
     </div>
   </header>
+  <ServerConfigModal :visible="configModalVisible" @close="configModalVisible = false" />
+  <ConnectionStatusModal :visible="statusModalVisible" @close="statusModalVisible = false" />
 </template>
 
 <style scoped>
@@ -118,7 +143,7 @@ const themeOptions: { mode: ThemeMode; key: string; icon: string }[] = [
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px;
+  padding: 0 12px;
   background: var(--color-topbar-bg);
   border-bottom: 1px solid var(--color-topbar-border);
   flex-shrink: 0;
@@ -127,7 +152,7 @@ const themeOptions: { mode: ThemeMode; key: string; icon: string }[] = [
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 .topbar-title {

@@ -96,6 +96,7 @@ button {
   min-height: 44px;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  user-select: none;
 }
 
 ul, ol { list-style: none; }

@@ -32,10 +32,10 @@
     }
   },
   "server": {
-    "connected": "已连接",
-    "disconnected": "未连接",
-    "unconfigured": "未配置",
-    "connecting": "连接中...",
+    "connected": "远程服务器已连接",
+    "disconnected": "远程服务器未连接",
+    "unconfigured": "远程服务器未配置",
+    "connecting": "远程服务器连接中...",
     "address": "服务器地址",
     "addressPlaceholder": "请输入服务器地址",
     "testConnection": "测试连接",

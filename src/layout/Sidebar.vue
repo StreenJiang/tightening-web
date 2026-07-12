@@ -188,6 +188,7 @@ onUnmounted(() => {
   transition: background 0.1s, transform 0.1s;
   white-space: nowrap;
   text-decoration: none;
+  user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }

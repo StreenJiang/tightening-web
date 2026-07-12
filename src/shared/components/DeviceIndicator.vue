@@ -2,6 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { usePointerPress } from '@/shared/composables/usePointerPress'
 import { statusLabel } from '@/shared/types/device'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
 defineProps<{ icon: string; label: string; status: 'offline' | 'ok' | 'error' | 'warning' }>()
 defineEmits<{ click: [] }>()
@@ -10,7 +12,7 @@ const { pressed, onDown, onUp } = usePointerPress()
 
 <template>
   <button class="device-btn" :class="[`status-${status}`, { pressed }]"
-    :title="`${label}：${statusLabel(status)}`"
+    :title="`${label}：${t(statusLabel(status))}`"
     @pointerdown="onDown" @pointerup="onUp" @pointerleave="onUp"
     @click="$emit('click')">
     <Icon :icon="icon" class="device-icon" />
