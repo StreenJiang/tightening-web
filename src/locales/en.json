@@ -52,5 +52,47 @@
     "manualReconnect": "Reconnect",
     "latency": "Latency",
     "latencyValue": "{n}ms latency"
+  },
+  "mission": {
+    "list": {
+      "search": "Search mission name...",
+      "create": "New Mission",
+      "empty": "No missions",
+      "emptyHint": "Create your first mission",
+      "deleteConfirm": "Delete mission {name}?",
+      "thumbnail": "Mission thumbnail",
+      "paginationPrev": "Older",
+      "paginationNext": "Newer",
+      "columns": { "name": "Name", "enabled": "Enabled", "inspection": "Inspection" },
+      "action": { "edit": "Edit mission", "delete": "Delete mission" },
+      "toggleFailed": "Toggle failed"
+    },
+    "edit": {
+      "createTitle": "New Mission",
+      "editTitle": "Edit Mission - {name}",
+      "back": "Back to list",
+      "groups": { "basic": "Basic Properties", "execution": "Execution Controls", "inspection": "Inspection Config" },
+      "fields": {
+        "name": "Mission Name", "enabled": "Enabled", "maxNgCount": "Max NG Count",
+        "passwordAfterNg": "Password After NG", "multiDevice": "Multi-Device Independent",
+        "skipScrew": "Skip Screw", "isInspection": "Inspection Mission",
+        "inspectionScope": "Inspection Scope", "inspectionScopeAll": "All Missions",
+        "inspectionScopeChosen": "Chosen Missions",
+        "inspectionSelectMissions": "Select missions to bind"
+      },
+      "meta": "Info",
+      "save": "Save", "saving": "Saving...", "cancel": "Cancel",
+      "unsavedTitle": "Unsaved Changes",
+      "unsavedMessage": "Unsaved changes will be lost. Leave?",
+      "unsavedLeave": "Leave",
+      "unsavedStay": "Stay",
+      "nameDuplicate": "Mission name already exists", "nameRequired": "Mission name is required",
+      "saveSuccess": "Saved successfully", "saveFailed": "Save failed",
+      "loadFailed": "Failed to load mission"
+    },
+    "delete": {
+      "confirm": "Delete {name}? This cannot be undone.",
+      "success": "Deleted successfully"
+    }
   }
 }

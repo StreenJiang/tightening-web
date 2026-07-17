@@ -4,7 +4,7 @@ import MainLayout from '@/layout/MainLayout.vue'
 
 const MODULES = [
   { path: 'workplace',    name: 'Workplace',    icon: 'mdi:monitor-screenshot',      page: () => import('@/modules/WorkplacePage.vue') },
-  { path: 'mission',      name: 'Mission',      icon: 'mdi:clipboard-text-outline',   page: () => import('@/modules/MissionPage.vue') },
+  { path: 'mission',      name: 'Mission',      icon: 'mdi:clipboard-text-outline',   page: () => import('@/modules/mission/MissionListPage.vue') },
   { path: 'workstation',  name: 'Workstation',  icon: 'mdi:worker',                   page: () => import('@/modules/WorkstationPage.vue') },
   { path: 'analysis',     name: 'Analysis',     icon: 'mdi:chart-bar',                page: () => import('@/modules/AnalysisPage.vue') },
   { path: 'device',       name: 'Device',       icon: 'mdi:cog',                      page: () => import('@/modules/DevicePage.vue') },
@@ -16,12 +16,17 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: MainLayout,
     redirect: '/workplace',
-    children: MODULES.map(m => ({
-      path: m.path,
-      name: m.name,
-      meta: { titleKey: `menu.${m.path}`, icon: m.icon },
-      component: m.page,
-    })),
+    children: [
+      ...MODULES.map(m => ({
+        path: m.path,
+        name: m.name,
+        meta: { titleKey: `menu.${m.path}`, icon: m.icon },
+        component: m.page,
+      })),
+      // 子路由 — 不在侧边栏菜单中显示
+      { path: 'mission/new',      name: 'MissionNew',  component: () => import('@/modules/mission/MissionEditPage.vue') },
+      { path: 'mission/:id/edit', name: 'MissionEdit', component: () => import('@/modules/mission/MissionEditPage.vue') },
+    ],
   },
   {
     path: '/:pathMatch(.*)*',

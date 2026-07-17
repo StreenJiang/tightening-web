@@ -52,5 +52,47 @@
     "manualReconnect": "手动重连",
     "latency": "延迟",
     "latencyValue": "延迟 {n}ms"
+  },
+  "mission": {
+    "list": {
+      "search": "搜索任务名称...",
+      "create": "新建任务",
+      "empty": "暂无任务",
+      "emptyHint": "点击新建创建第一个拧紧任务",
+      "deleteConfirm": "确定删除任务 {name}？",
+      "thumbnail": "任务缩略图",
+      "paginationPrev": "较旧",
+      "paginationNext": "较新",
+      "columns": { "name": "名称", "enabled": "启用", "inspection": "点检" },
+      "action": { "edit": "编辑任务", "delete": "删除任务" },
+      "toggleFailed": "状态切换失败"
+    },
+    "edit": {
+      "createTitle": "新建任务",
+      "editTitle": "编辑任务 - {name}",
+      "back": "返回列表",
+      "groups": { "basic": "基本属性", "execution": "执行控制", "inspection": "点检配置" },
+      "fields": {
+        "name": "任务名称", "enabled": "启用", "maxNgCount": "最大NG数",
+        "passwordAfterNg": "NG后需密码", "multiDevice": "多设备独立",
+        "skipScrew": "跳过螺钉", "isInspection": "点检任务",
+        "inspectionScope": "检查范围", "inspectionScopeAll": "全部任务",
+        "inspectionScopeChosen": "指定任务",
+        "inspectionSelectMissions": "选择要绑定的拧紧任务"
+      },
+      "meta": "任务信息",
+      "save": "保存", "saving": "保存中...", "cancel": "取消",
+      "unsavedTitle": "未保存的更改",
+      "unsavedMessage": "有未保存的更改，确定离开？",
+      "unsavedLeave": "离开",
+      "unsavedStay": "继续编辑",
+      "nameDuplicate": "任务名称已存在", "nameRequired": "请输入任务名称",
+      "saveSuccess": "保存成功", "saveFailed": "保存失败",
+      "loadFailed": "加载任务失败"
+    },
+    "delete": {
+      "confirm": "确定删除任务 {name}？此操作不可撤销。",
+      "success": "删除成功"
+    }
   }
 }
