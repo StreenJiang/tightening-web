@@ -1,41 +1,52 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSidebarStore } from '@/stores/sidebar'
 import { useThemeStore } from '@/stores/theme'
-import IconButton from '@/shared/components/IconButton.vue'
-import MenuItem from '@/shared/components/MenuItem.vue'
-import type { ThemeMode } from '@/stores/theme'
-import ConnectionIndicator from '@/shared/components/ConnectionIndicator.vue'
-import ServerConfigModal from '@/shared/components/ServerConfigModal.vue'
-import ConnectionStatusModal from '@/shared/components/ConnectionStatusModal.vue'
 import { useServerConnectionStore } from '@/stores/serverConnection'
+import type { ThemeMode } from '@/stores/theme'
+import Toolbar from 'primevue/toolbar'
+import Button from 'primevue/button'
+import Popover from 'primevue/popover'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
 
 const { t, locale } = useI18n()
-const conn = useServerConnectionStore()
-const configModalVisible = ref(false)
-const statusModalVisible = ref(false)
 const sidebar = useSidebarStore()
 const theme = useThemeStore()
+const conn = useServerConnectionStore()
 
-const themeOpen = ref(false)
-const themeBtn = ref<InstanceType<typeof IconButton> | null>(null)
-const dropdownStyle = ref<Record<string, string>>({})
-
-function onDocClick(e: MouseEvent) {
-  const el = themeBtn.value?.$el as HTMLElement | undefined
-  if (el && !el.contains(e.target as Node)) {
-    themeOpen.value = false
-  }
-}
-
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
-onMounted(() => conn.fetchStatus())
+const configModalVisible = ref(false)
+const statusModalVisible = ref(false)
+const themeOp = ref<InstanceType<typeof Popover> | null>(null)
 
 function toggleLocale() {
   locale.value = locale.value === 'zh-CN' ? 'en' : 'zh-CN'
 }
+
+const localeLabel = computed(() => locale.value === 'zh-CN' ? 'EN' : '中')
+
+function selectTheme(m: ThemeMode) {
+  theme.setMode(m)
+  themeOp.value?.hide()
+}
+
+const themeOptions: { mode: ThemeMode; key: string; icon: string }[] = [
+  { mode: 'light', key: 'common.themeLight', icon: 'pi pi-sun' },
+  { mode: 'dark', key: 'common.themeDark', icon: 'pi pi-moon' },
+  { mode: 'system', key: 'common.themeSystem', icon: 'pi pi-palette' },
+]
+
+const connLabel = computed(() => {
+  const map: Record<string, string> = {
+    connected: 'server.connected',
+    disconnected: 'server.disconnected',
+    unconfigured: 'server.unconfigured',
+    loading: 'server.connecting',
+  }
+  return t(map[conn.status] ?? 'server.unconfigured')
+})
 
 function onConnClick() {
   if (conn.status === 'unconfigured') {
@@ -43,137 +54,194 @@ function onConnClick() {
   } else if (conn.status === 'disconnected') {
     statusModalVisible.value = true
   }
-  // connected — tooltip 已在 title 属性中处理，无需弹出
 }
 
-const localeLabel = computed(() => locale.value === 'zh-CN' ? 'EN' : '中')
-
-async function openThemeDropdown() {
-  themeOpen.value = !themeOpen.value
-  if (themeOpen.value) {
-    await nextTick()
-    const el = themeBtn.value?.$el as HTMLElement | undefined
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      dropdownStyle.value = {
-        position: 'fixed',
-        top: `${rect.bottom + 4}px`,
-        right: `${window.innerWidth - rect.right}px`,
-      }
-    }
-  }
-}
-
-function selectTheme(m: ThemeMode) {
-  theme.setMode(m)
-  themeOpen.value = false
-}
-
-const themeIcon = computed(() => {
-  const icons: Record<ThemeMode, string> = {
-    light: 'mdi:white-balance-sunny',
-    dark: 'mdi:weather-night',
-    system: 'mdi:theme-light-dark',
-  }
-  return icons[theme.mode]
+// ---- ServerConfig ----
+const cfg = reactive({
+  address: '',
+  testing: false,
+  testResult: 'idle' as 'idle' | 'success' | 'fail',
+  testError: '',
+  saving: false,
+  saveError: '',
 })
 
-const themeOptions: { mode: ThemeMode; key: string; icon: string }[] = [
-  { mode: 'light', key: 'common.themeLight', icon: 'mdi:white-balance-sunny' },
-  { mode: 'dark', key: 'common.themeDark', icon: 'mdi:weather-night' },
-  { mode: 'system', key: 'common.themeSystem', icon: 'mdi:theme-light-dark' },
-]
+function resetConfig() {
+  Object.assign(cfg, { address: '', testing: false, testResult: 'idle' as const, testError: '', saving: false, saveError: '' })
+}
+
+const canSave = computed(() => cfg.testResult === 'success' && !cfg.saving)
+
+async function handleTest() {
+  if (!cfg.address.trim()) return
+  cfg.testing = true
+  cfg.testResult = 'idle'
+  cfg.testError = ''
+  try {
+    const r = await conn.testConnection(cfg.address.trim())
+    if (r.success) cfg.testResult = 'success'
+    else { cfg.testResult = 'fail'; cfg.testError = r.errorReason }
+  } catch {
+    cfg.testResult = 'fail'
+  } finally {
+    cfg.testing = false
+  }
+}
+
+async function handleSave() {
+  if (!canSave) return
+  cfg.saving = true
+  try {
+    await conn.saveConfig(cfg.address.trim())
+    configModalVisible.value = false
+  } catch {
+    cfg.saveError = t('server.saveFailed')
+  } finally {
+    cfg.saving = false
+  }
+}
+
+onMounted(() => conn.fetchStatus())
 </script>
 
 <template>
-  <header class="topbar">
-    <div class="topbar-left">
-      <IconButton
-        :icon="sidebar.collapsed ? 'mdi:menu-open' : 'mdi:menu'"
-        :title="t(sidebar.collapsed ? 'common.expandSidebar' : 'common.collapseSidebar')"
+  <Toolbar class="topbar">
+    <template #start>
+      <Button
+        icon="pi pi-bars"
+        severity="secondary" text rounded
         @click="sidebar.toggle()"
       />
       <span class="topbar-title">{{ t('app.title') }}</span>
-      <ConnectionIndicator
-        :status="conn.status"
-        :address="conn.address"
-        :latency="conn.latency ?? undefined"
-        @click="onConnClick"
+      <Button severity="secondary" text class="conn-btn" @click="onConnClick">
+        <template #icon>
+          <span class="conn-dot" :class="'conn-dot--' + conn.status" />
+        </template>
+        <span class="conn-label">{{ connLabel }}</span>
+      </Button>
+    </template>
+
+    <template #end>
+      <Button
+        :icon="themeOptions.find(o => o.mode === theme.mode)?.icon ?? 'pi pi-palette'"
+        severity="secondary" text rounded
+        @click="(e: Event) => themeOp?.toggle(e)"
       />
-    </div>
-    <div class="topbar-right">
-      <!-- 主题 -->
-      <IconButton
-        ref="themeBtn"
-        :icon="themeIcon"
-        :title="t('common.themeSwitch')"
-        @click="openThemeDropdown"
-      />
-      <Teleport to="body">
-        <div v-if="themeOpen" class="theme-dropdown" :style="dropdownStyle" @click.stop>
-          <MenuItem
-            v-for="opt in themeOptions"
-            :key="opt.mode"
-            :icon="opt.icon"
-            :label="t(opt.key)"
-            :active="theme.mode === opt.mode"
+      <Popover ref="themeOp">
+        <div class="theme-popover">
+          <Button
+            v-for="opt in themeOptions" :key="opt.mode"
+            :icon="opt.icon" :label="t(opt.key)"
+            :severity="theme.mode === opt.mode ? 'primary' : 'secondary'" text
             @click="selectTheme(opt.mode)"
           />
         </div>
-      </Teleport>
+      </Popover>
 
-      <!-- 语言 -->
-      <IconButton
-        :label="localeLabel"
-        :title="t('common.switchLanguage')"
+      <Button
+        :label="localeLabel" severity="secondary" text rounded
         @click="toggleLocale"
       />
+      <Button icon="pi pi-user" severity="secondary" text rounded />
+    </template>
+  </Toolbar>
 
-      <!-- 用户 -->
-      <IconButton icon="mdi:account-circle" />
+  <!-- Connection status dialog -->
+  <Dialog
+    v-model:visible="statusModalVisible"
+    :header="t('server.disconnectTitle')" modal
+  >
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <i class="pi pi-exclamation-circle" style="color:var(--p-yellow-500);font-size:18px" />
+        <span>{{ t('server.disconnected') }}</span>
+      </div>
+      <div
+        v-if="conn.errorReason"
+        style="font-size:13px;color:var(--color-text-secondary)"
+      >
+        {{ t('server.reason') }}: {{ conn.errorReason }}
+      </div>
     </div>
-  </header>
-  <ServerConfigModal :visible="configModalVisible" @close="configModalVisible = false" />
-  <ConnectionStatusModal :visible="statusModalVisible" @close="statusModalVisible = false" />
+    <template #footer>
+      <Button
+        icon="pi pi-refresh" :label="t('server.manualReconnect')"
+        @click="conn.reconnect()"
+      />
+    </template>
+  </Dialog>
+
+  <!-- Server config dialog -->
+  <Dialog
+    v-model:visible="configModalVisible"
+    :header="t('server.configureTitle')" modal @show="resetConfig"
+  >
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <label style="font-size:13px">{{ t('server.address') }}</label>
+      <InputText
+        v-model="cfg.address"
+        :placeholder="t('server.addressPlaceholder')"
+        :disabled="cfg.testing" fluid
+      />
+      <Message v-if="cfg.testResult === 'success'" severity="success">
+        {{ t('server.testSuccess') }}
+      </Message>
+      <Message v-else-if="cfg.testResult === 'fail'" severity="error">
+        {{ cfg.testError || t('server.testFailed') }}
+      </Message>
+      <Message v-if="cfg.saveError" severity="error">
+        {{ cfg.saveError }}
+      </Message>
+    </div>
+    <template #footer>
+      <Button
+        :label="t('server.testConnection')"
+        :loading="cfg.testing" :disabled="!cfg.address.trim()"
+        severity="secondary" @click="handleTest"
+      />
+      <Button
+        :label="t('server.save')" :disabled="!canSave"
+        @click="handleSave"
+      />
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
 .topbar {
   height: var(--topbar-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-shrink: 0;
   padding: 0 12px;
   background: var(--color-topbar-bg);
-  border-bottom: 1px solid var(--color-topbar-border);
-  flex-shrink: 0;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
 }
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .topbar-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-text);
+  margin: 0 8px;
 }
+.conn-btn {
+  flex-shrink: 0;
+}
+.conn-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--p-gray-400);
+}
+.conn-dot--connected { background: var(--p-green-500); }
+.conn-dot--disconnected { background: var(--p-red-500); }
+.conn-dot--unconfigured { background: var(--p-yellow-500); }
+.conn-dot--loading { background: var(--p-blue-500); }
 
-.topbar-right {
+.conn-label {
+  font-size: 13px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.theme-popover {
   display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.theme-dropdown {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  z-index: 1100;
-  min-width: 150px;
+  flex-direction: column;
   padding: 4px;
+  min-width: 150px;
 }
 </style>

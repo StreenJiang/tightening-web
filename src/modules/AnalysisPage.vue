@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import PlaceholderCard from '@/shared/components/PlaceholderCard.vue'
+import Message from 'primevue/message'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="page-wrapper">
-    <PlaceholderCard title-key="menu.analysis" icon="mdi:chart-bar" />
+    <Message severity="info" :closable="false">
+      {{ t('menu.analysis') }} — {{ t('common.underConstruction') }}
+    </Message>
   </div>
 </template>
 

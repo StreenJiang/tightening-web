@@ -2,20 +2,20 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Icon } from '@iconify/vue'
 import MissionBasicForm from './components/MissionBasicForm.vue'
-import ScrollArea from '@/shared/components/ScrollArea.vue'
-import Card from '@/shared/components/Card.vue'
+import ScrollPanel from 'primevue/scrollpanel'
+import Card from 'primevue/card'
+import Button from 'primevue/button'
 import { fetchMission, createMission, updateMission } from '@/shared/api/mission'
-import { useToastStore } from '@/stores/toast'
-import { useConfirmStore } from '@/stores/confirm'
+import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 import type { ProductMission } from '@/shared/types/mission'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const toast = useToastStore()
-const confirmStore = useConfirmStore()
+const toast = useToast()
+const confirm = useConfirm()
 
 const id = route.params.id ? Number(route.params.id) : null
 const isEdit = id !== null
@@ -24,12 +24,12 @@ const saving = ref(false)
 
 const form = ref<ProductMission>({
   name: '',
-  enabled: 1,
+  enabled: true,
   maxNgCount: null,
-  passwordRequiredAfterNg: 0,
-  multiDeviceIndependent: 0,
-  skipScrew: 0,
-  isInspection: 0,
+  passwordRequiredAfterNg: false,
+  multiDeviceIndependent: false,
+  skipScrew: false,
+  isInspection: false,
   inspectionScope: 0,
 })
 
@@ -43,7 +43,7 @@ onMounted(async () => {
       Object.assign(form.value, data)
       snapshot = JSON.stringify(form.value)
     } catch {
-      toast.show(t('mission.edit.loadFailed'), 'error', 3000)
+      toast.add({ severity: 'error', detail: t('mission.edit.loadFailed'), life: 3000 })
       router.push({ path: '/mission' })
     } finally {
       loading.value = false
@@ -60,7 +60,7 @@ function isDirty(): boolean {
 async function handleSave() {
   const name = form.value.name.trim()
   if (!name) {
-    toast.show(t('mission.edit.nameRequired'), 'error')
+    toast.add({ severity: 'error', detail: t('mission.edit.nameRequired'), life: 3000 })
     return
   }
   saving.value = true
@@ -71,15 +71,16 @@ async function handleSave() {
       await createMission({ ...form.value, name })
     }
     snapshot = JSON.stringify(form.value)
-    toast.show(t('mission.edit.saveSuccess'), 'success', 2000)
+    toast.add({ severity: 'success', detail: t('mission.edit.saveSuccess'), life: 2000 })
     setTimeout(() => {
-      router.push({
-        path: '/mission',
-        query: { page: route.query.page, name: route.query.name },
-      })
+      router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
     }, 300)
   } catch (e) {
-    toast.show(`${t('mission.edit.saveFailed')}: ${(e as Error).message}`, 'error', 5000)
+    toast.add({
+      severity: 'error',
+      detail: `${t('mission.edit.saveFailed')}: ${(e as Error).message}`,
+      life: 5000,
+    })
   } finally {
     saving.value = false
   }
@@ -87,44 +88,55 @@ async function handleSave() {
 
 async function handleBack() {
   if (isDirty()) {
-    const confirmed = await confirmStore.open({
-      title: t('mission.edit.unsavedTitle'),
+    confirm.require({
+      header: t('mission.edit.unsavedTitle'),
       message: t('mission.edit.unsavedMessage'),
-      cancelLabel: t('mission.edit.unsavedStay'),
-      confirmLabel: t('mission.edit.unsavedLeave'),
+      rejectLabel: t('mission.edit.unsavedStay'),
+      acceptLabel: t('mission.edit.unsavedLeave'),
+      accept: () => {
+        router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
+      },
     })
-    if (!confirmed) return
+  } else {
+    router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
   }
-  router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
 }
 
 onBeforeRouteLeave(async (_to, _from) => {
   if (isDirty()) {
-    const confirmed = await confirmStore.open({
-      title: t('mission.edit.unsavedTitle'),
-      message: t('mission.edit.unsavedMessage'),
-      cancelLabel: t('mission.edit.unsavedStay'),
-      confirmLabel: t('mission.edit.unsavedLeave'),
+    const leave = await new Promise<boolean>((resolve) => {
+      confirm.require({
+        header: t('mission.edit.unsavedTitle'),
+        message: t('mission.edit.unsavedMessage'),
+        rejectLabel: t('mission.edit.unsavedStay'),
+        acceptLabel: t('mission.edit.unsavedLeave'),
+        accept: () => resolve(true),
+        reject: () => resolve(false),
+      })
     })
-    if (!confirmed) return false
+    if (!leave) return false
   }
 })
 
 const title = computed(() =>
-  isEdit ? t('mission.edit.editTitle', { name: form.value.name }) : t('mission.edit.createTitle')
+  isEdit
+    ? t('mission.edit.editTitle', { name: form.value.name })
+    : t('mission.edit.createTitle'),
 )
 </script>
 
 <template>
   <div class="edit-page">
     <nav class="edit-nav">
-      <button class="back-btn" @click="handleBack" :aria-label="String(t('mission.edit.back'))">
-        <Icon icon="mdi:arrow-left" width="20" />
-      </button>
+      <Button
+        icon="pi pi-arrow-left" severity="secondary" text rounded
+        :aria-label="String(t('mission.edit.back'))"
+        @click="handleBack"
+      />
       <h1 class="edit-title">{{ title }}</h1>
     </nav>
 
-    <ScrollArea class="edit-body">
+    <ScrollPanel class="edit-body">
       <div v-if="loading" class="skeleton-container">
         <div class="skeleton-group">
           <div class="skeleton-title" />
@@ -149,32 +161,40 @@ const title = computed(() =>
         </div>
 
         <aside v-if="isEdit" class="edit-sidebar">
-          <Card :title="t('mission.edit.meta')">
-            <dl class="side-meta">
-              <template v-if="form.createTime">
-                <dt>创建时间</dt>
-                <dd>{{ form.createTime }}</dd>
-              </template>
-              <template v-if="form.modifyTime">
-                <dt>修改时间</dt>
-                <dd>{{ form.modifyTime }}</dd>
-              </template>
-              <template v-if="!form.createTime && !form.modifyTime">
-                <dd class="side-empty">暂无记录</dd>
-              </template>
-            </dl>
+          <Card>
+            <template #title>{{ t('mission.edit.meta') }}</template>
+            <template #content>
+              <dl class="side-meta">
+                <template v-if="form.createTime">
+                  <dt>创建时间</dt>
+                  <dd>{{ form.createTime }}</dd>
+                </template>
+                <template v-if="form.modifyTime">
+                  <dt>修改时间</dt>
+                  <dd>{{ form.modifyTime }}</dd>
+                </template>
+                <template v-if="!form.createTime && !form.modifyTime">
+                  <dd class="side-empty">暂无记录</dd>
+                </template>
+              </dl>
+            </template>
           </Card>
         </aside>
       </div>
-    </ScrollArea>
+    </ScrollPanel>
 
     <div class="edit-actions">
-      <button class="action-btn cancel" @click="handleBack" :disabled="saving">
-        {{ t('mission.edit.cancel') }}
-      </button>
-      <button class="action-btn save" @click="handleSave" :disabled="saving">
-        {{ saving ? t('mission.edit.saving') : t('mission.edit.save') }}
-      </button>
+      <Button
+        :label="String(t('mission.edit.cancel'))"
+        severity="secondary" text
+        :disabled="saving"
+        @click="handleBack"
+      />
+      <Button
+        :label="saving ? String(t('mission.edit.saving')) : String(t('mission.edit.save'))"
+        :disabled="saving"
+        @click="handleSave"
+      />
     </div>
   </div>
 </template>
@@ -194,7 +214,7 @@ const title = computed(() =>
   padding: 12px 20px;
   background: var(--color-surface);
   border-radius: 8px;
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -203,29 +223,9 @@ const title = computed(() =>
   min-height: 0;
 }
 
-.back-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.back-btn:hover {
-  background: var(--color-border-subtle);
-  color: var(--color-text);
-}
-
 .edit-title {
   font-size: 22px;
   font-weight: 700;
-  color: var(--color-text);
   margin: 0;
   letter-spacing: -0.3px;
 }
@@ -249,31 +249,15 @@ const title = computed(() =>
   top: 16px;
 }
 
-.side-meta {
-  margin: 0;
-}
-
+.side-meta { margin: 0; }
 .side-meta dt {
   font-size: 12px;
   color: var(--color-text-secondary);
   margin: 12px 0 2px 0;
 }
-
-.side-meta dt:first-child {
-  margin-top: 0;
-}
-
-.side-meta dd {
-  font-size: 14px;
-  color: var(--color-text);
-  font-weight: 500;
-  margin: 0;
-}
-
-.side-empty {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
+.side-meta dt:first-child { margin-top: 0; }
+.side-meta dd { font-size: 14px; font-weight: 500; margin: 0; }
+.side-empty { font-size: 13px; color: var(--color-text-secondary); }
 
 .edit-actions {
   display: flex;
@@ -283,46 +267,10 @@ const title = computed(() =>
   padding: 12px 20px;
   background: var(--color-surface);
   border-radius: 8px;
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
-.action-btn {
-  height: 40px;
-  padding: 0 20px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  min-width: 80px;
-}
-
-.action-btn.cancel {
-  background: transparent;
-  color: var(--color-text-secondary);
-}
-
-.action-btn.cancel:hover {
-  background: var(--color-border-subtle);
-  color: var(--color-text);
-}
-
-.action-btn.save {
-  background: var(--color-primary);
-  color: #fcfcfb;
-  font-weight: 600;
-}
-
-html.dark .action-btn.save { color: #1a1a1a; }
-.action-btn.save:hover { filter: brightness(1.05); }
-.action-btn.save:disabled { opacity: 0.4; cursor: not-allowed; }
-.action-btn:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-/* Skeleton */
 .skeleton-container { max-width: 640px; }
 .skeleton-group { margin-bottom: 32px; }
 .skeleton-title {

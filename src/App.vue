@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import ToastNotification from '@/shared/components/ToastNotification.vue'
-import ConfirmDialog from '@/shared/components/ConfirmDialog.vue'
+import Toast from 'primevue/toast'
+import ConfirmDialog from 'primevue/confirmdialog'
 </script>
 
 <template>
   <router-view />
-  <ToastNotification />
+  <Toast position="top-center" />
   <ConfirmDialog />
 </template>

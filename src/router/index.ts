@@ -3,12 +3,12 @@ import type { RouteRecordRaw } from 'vue-router'
 import MainLayout from '@/layout/MainLayout.vue'
 
 const MODULES = [
-  { path: 'workplace',    name: 'Workplace',    icon: 'mdi:monitor-screenshot',      page: () => import('@/modules/WorkplacePage.vue') },
-  { path: 'mission',      name: 'Mission',      icon: 'mdi:clipboard-text-outline',   page: () => import('@/modules/mission/MissionListPage.vue') },
-  { path: 'workstation',  name: 'Workstation',  icon: 'mdi:worker',                   page: () => import('@/modules/WorkstationPage.vue') },
-  { path: 'analysis',     name: 'Analysis',     icon: 'mdi:chart-bar',                page: () => import('@/modules/AnalysisPage.vue') },
-  { path: 'device',       name: 'Device',       icon: 'mdi:cog',                      page: () => import('@/modules/DevicePage.vue') },
-  { path: 'integration',  name: 'Integration',  icon: 'mdi:connection',               page: () => import('@/modules/IntegrationPage.vue') },
+  { path: 'workplace',    name: 'Workplace',    icon: 'pi pi-desktop',       page: () => import('@/modules/WorkplacePage.vue') },
+  { path: 'mission',      name: 'Mission',      icon: 'pi pi-clipboard',      page: () => import('@/modules/mission/MissionListPage.vue') },
+  { path: 'workstation',  name: 'Workstation',  icon: 'pi pi-wrench',         page: () => import('@/modules/WorkstationPage.vue') },
+  { path: 'analysis',     name: 'Analysis',     icon: 'pi pi-chart-bar',      page: () => import('@/modules/AnalysisPage.vue') },
+  { path: 'device',       name: 'Device',       icon: 'pi pi-cog',            page: () => import('@/modules/DevicePage.vue') },
+  { path: 'integration',  name: 'Integration',  icon: 'pi pi-link',           page: () => import('@/modules/IntegrationPage.vue') },
 ]
 
 const routes: RouteRecordRaw[] = [

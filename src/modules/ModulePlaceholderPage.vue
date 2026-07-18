@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import PlaceholderCard from '@/shared/components/PlaceholderCard.vue'
+import Message from 'primevue/message'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
+const { t } = useI18n()
 const titleKey = route.meta.titleKey as string
-const icon = route.meta.icon as string | undefined
 </script>
 
 <template>
   <div class="page-wrapper">
-    <PlaceholderCard :title-key="titleKey" :icon="icon" />
+    <Message severity="info" :closable="false">
+      {{ t(titleKey) }} — {{ t('common.underConstruction') }}
+    </Message>
   </div>
 </template>
 

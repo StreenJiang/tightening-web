@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { fetchMissions, updateMission, deleteMission } from '@/shared/api/mission'
-import { useToastStore } from './toast'
+import { useToast } from 'primevue/usetoast'
 import type { ProductMission } from '@/shared/types/mission'
 
 export const useMissionStore = defineStore('mission', () => {
@@ -9,6 +9,7 @@ export const useMissionStore = defineStore('mission', () => {
   const loading = ref(false)
   const pagination = ref({ page: 1, size: 20, total: 0 })
   const searchName = ref('')
+  const toast = useToast()
 
   async function loadMissions(query?: { page?: number; name?: string }) {
     if (query) {
@@ -33,19 +34,19 @@ export const useMissionStore = defineStore('mission', () => {
 
   async function toggleEnabled(mission: ProductMission) {
     const previous = mission.enabled
-    mission.enabled = mission.enabled === 1 ? 0 : 1
+    mission.enabled = !mission.enabled
     try {
-      await updateMission(mission.id!, { ...mission, enabled: mission.enabled })
+      await updateMission(mission.id!, { ...mission })
     } catch {
       mission.enabled = previous
-      useToastStore().show('mission.list.toggleFailed', 'error')
+      toast.add({ severity: 'error', detail: 'mission.list.toggleFailed', life: 3000 })
     }
   }
 
   async function removeMission(id: number) {
     await deleteMission(id)
     await loadMissions()
-    useToastStore().show('mission.delete.success', 'success')
+    toast.add({ severity: 'success', detail: 'mission.delete.success', life: 3000 })
   }
 
   return { missions, loading, pagination, searchName, loadMissions, toggleEnabled, removeMission }

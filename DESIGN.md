@@ -110,7 +110,6 @@ Flyout shadow: `0 4px 12px rgba(0,0,0,0.3)`
 
 ### Touch
 
-- 所有交互目标 `≥44px`（适配戴手套操作）
 - `-webkit-tap-highlight-color: transparent`
 - `touch-action: manipulation` 全局禁用双击缩放
 

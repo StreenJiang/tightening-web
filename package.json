@@ -9,14 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@iconify/vue": "^5.0.1",
+    "@primevue/themes": "^4.5.3",
     "pinia": "^3.0.4",
+    "primeicons": "^8.0.0",
+    "primevue": "^4.5.5",
     "vue": "^3.5.39",
     "vue-i18n": "^11.4.6",
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
-    "@iconify-json/mdi": "^1.2.3",
     "@types/node": "^24.13.2",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/tsconfig": "^0.9.1",

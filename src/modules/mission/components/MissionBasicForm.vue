@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ToggleSwitch from '@/shared/components/ToggleSwitch.vue'
+import ToggleSwitch from 'primevue/toggleswitch'
+import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
+import RadioButton from 'primevue/radiobutton'
+import Checkbox from 'primevue/checkbox'
 import { checkName, fetchMissions } from '@/shared/api/mission'
 import type { ProductMission } from '@/shared/types/mission'
 
@@ -56,23 +60,33 @@ function onNameBlur() {
   validateName()
 }
 
-watch(() => props.modelValue.isInspection, (val) => {
-  if (val === 0) {
-    update('inspectionScope', 0)
-    boundMissionIds.value = []
-  }
-})
+onUnmounted(() => clearTimeout(checkTimer))
 
-watch(() => props.modelValue.inspectionScope, async (val) => {
-  if (val === 2 && availableMissions.value.length === 0) {
-    try {
-      const data = await fetchMissions({ page: 1, size: 500 })
-      availableMissions.value = data.records.filter(
-        m => m.isInspection === 0 && m.id !== props.modelValue.id
-      )
-    } catch { /* ignore */ }
-  }
-})
+watch(
+  () => props.modelValue.isInspection,
+  (val) => {
+    if (!val) {
+      update('inspectionScope', 0)
+      boundMissionIds.value = []
+    }
+  },
+)
+
+watch(
+  () => props.modelValue.inspectionScope,
+  async (val) => {
+    if (val === 2 && availableMissions.value.length === 0) {
+      try {
+        const data = await fetchMissions({ page: 1, size: 500 })
+        availableMissions.value = data.records.filter(
+          (m) => !m.isInspection && m.id !== props.modelValue.id,
+        )
+      } catch {
+        /* ignore */
+      }
+    }
+  },
+)
 
 function toggleBindMission(id: number) {
   const idx = boundMissionIds.value.indexOf(id)
@@ -92,13 +106,12 @@ function toggleBindMission(id: number) {
       <div class="form-row form-row-name">
         <label class="form-label">{{ t('mission.edit.fields.name') }}</label>
         <div class="form-field">
-          <input
-            type="text"
-            class="form-input"
-            :class="{ error: nameError }"
-            :value="modelValue.name"
-            :placeholder="t('mission.edit.fields.name')"
-            @input="update('name', ($event.target as HTMLInputElement).value)"
+          <InputText
+            :model-value="modelValue.name"
+            :placeholder="String(t('mission.edit.fields.name'))"
+            :class="{ 'p-invalid': nameError }"
+            fluid
+            @update:model-value="update('name', ($event as string) ?? '')"
             @blur="onNameBlur"
           />
           <span v-if="nameChecking" class="field-spinner" />
@@ -109,7 +122,7 @@ function toggleBindMission(id: number) {
         <label class="form-label">{{ t('mission.edit.fields.enabled') }}</label>
         <ToggleSwitch
           :model-value="modelValue.enabled"
-          @update:model-value="update('enabled', $event)"
+          @update:model-value="update('enabled', $event as boolean)"
         />
       </div>
     </div>
@@ -119,34 +132,32 @@ function toggleBindMission(id: number) {
       <h3 class="group-title">{{ t('mission.edit.groups.execution') }}</h3>
       <div class="form-row">
         <label class="form-label">{{ t('mission.edit.fields.maxNgCount') }}</label>
-        <input
-          type="number"
-          class="form-input number"
-          :value="modelValue.maxNgCount ?? ''"
-          min="0"
-          max="999"
-          @input="update('maxNgCount', ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value))"
+        <InputNumber
+          :model-value="modelValue.maxNgCount ?? undefined"
+          :min="0"
+          :max="999"
+          @update:model-value="update('maxNgCount', $event ?? null)"
         />
       </div>
       <div class="form-row">
         <label class="form-label">{{ t('mission.edit.fields.skipScrew') }}</label>
         <ToggleSwitch
           :model-value="modelValue.skipScrew"
-          @update:model-value="update('skipScrew', $event)"
+          @update:model-value="update('skipScrew', $event as boolean)"
         />
       </div>
       <div class="form-row">
         <label class="form-label">{{ t('mission.edit.fields.passwordAfterNg') }}</label>
         <ToggleSwitch
           :model-value="modelValue.passwordRequiredAfterNg"
-          @update:model-value="update('passwordRequiredAfterNg', $event)"
+          @update:model-value="update('passwordRequiredAfterNg', $event as boolean)"
         />
       </div>
       <div class="form-row">
         <label class="form-label">{{ t('mission.edit.fields.multiDevice') }}</label>
         <ToggleSwitch
           :model-value="modelValue.multiDeviceIndependent"
-          @update:model-value="update('multiDeviceIndependent', $event)"
+          @update:model-value="update('multiDeviceIndependent', $event as boolean)"
         />
       </div>
     </div>
@@ -158,34 +169,37 @@ function toggleBindMission(id: number) {
         <label class="form-label">{{ t('mission.edit.fields.isInspection') }}</label>
         <ToggleSwitch
           :model-value="modelValue.isInspection"
-          @update:model-value="update('isInspection', $event)"
+          @update:model-value="update('isInspection', $event as boolean)"
         />
       </div>
-      <div v-if="modelValue.isInspection === 1" class="form-row radio-row">
+      <div v-if="modelValue.isInspection" class="form-row radio-row">
         <label class="form-label">{{ t('mission.edit.fields.inspectionScope') }}</label>
         <div class="radio-group">
           <label class="radio-item">
-            <input
-              type="radio"
+            <RadioButton
+              :model-value="modelValue.inspectionScope"
               name="inspectionScope"
-              :checked="modelValue.inspectionScope === 1"
-              @change="update('inspectionScope', 1)"
+              :value="1"
+              @update:model-value="update('inspectionScope', 1)"
             />
             <span>{{ t('mission.edit.fields.inspectionScopeAll') }}</span>
           </label>
           <label class="radio-item">
-            <input
-              type="radio"
+            <RadioButton
+              :model-value="modelValue.inspectionScope"
               name="inspectionScope"
-              :checked="modelValue.inspectionScope === 2"
-              @change="update('inspectionScope', 2)"
+              :value="2"
+              @update:model-value="update('inspectionScope', 2)"
             />
             <span>{{ t('mission.edit.fields.inspectionScopeChosen') }}</span>
           </label>
         </div>
       </div>
 
-      <div v-if="modelValue.isInspection === 1 && modelValue.inspectionScope === 2" class="mission-picker">
+      <div
+        v-if="modelValue.isInspection && modelValue.inspectionScope === 2"
+        class="mission-picker"
+      >
         <p class="picker-hint">{{ t('mission.edit.fields.inspectionSelectMissions') }}</p>
         <div v-if="availableMissions.length === 0" class="picker-empty">
           暂无可用拧紧任务
@@ -195,10 +209,10 @@ function toggleBindMission(id: number) {
           :key="m.id"
           class="picker-item"
         >
-          <input
-            type="checkbox"
-            :checked="boundMissionIds.includes(m.id!)"
-            @change="toggleBindMission(m.id!)"
+          <Checkbox
+            :model-value="boundMissionIds.includes(m.id!)"
+            binary
+            @update:model-value="toggleBindMission(m.id!)"
           />
           <span>{{ m.name }}</span>
         </label>
@@ -251,7 +265,6 @@ function toggleBindMission(id: number) {
   flex-shrink: 0;
   font-size: 14px;
   line-height: 1;
-  color: var(--color-text);
   text-align: right;
 }
 
@@ -261,36 +274,9 @@ function toggleBindMission(id: number) {
   position: relative;
 }
 
-.form-input {
-  width: 100%;
-  height: 34px;
-  padding: 0 10px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.form-input.number {
-  width: 68px;
-}
-
-.form-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(196, 151, 0, 0.12);
-}
-
-.form-input.error {
-  border-color: var(--color-status-error);
-}
-
 .field-error {
   font-size: 13px;
-  color: var(--color-status-error);
+  color: var(--p-red-500);
   margin: 2px 0 0 0;
 }
 
@@ -302,7 +288,7 @@ function toggleBindMission(id: number) {
   width: 14px;
   height: 14px;
   border: 2px solid var(--color-border);
-  border-top-color: var(--color-primary);
+  border-top-color: var(--p-primary-500);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -331,23 +317,15 @@ function toggleBindMission(id: number) {
   gap: 8px;
   height: 34px;
   font-size: 14px;
-  color: var(--color-text);
   cursor: pointer;
 }
 
-.radio-item input[type="radio"] {
-  accent-color: var(--color-primary);
-  width: 16px;
-  height: 16px;
-}
-
-/* Mission picker */
 .mission-picker {
   margin-top: 12px;
   margin-left: 130px;
   padding: 12px;
   background: var(--color-bg);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   max-height: 240px;
   overflow-y: auto;
@@ -371,19 +349,12 @@ function toggleBindMission(id: number) {
   gap: 8px;
   height: 32px;
   font-size: 14px;
-  color: var(--color-text);
   cursor: pointer;
   border-radius: 4px;
   padding: 0 4px;
 }
 
 .picker-item:hover {
-  background: var(--color-border-subtle);
-}
-
-.picker-item input[type="checkbox"] {
-  accent-color: var(--color-primary);
-  width: 16px;
-  height: 16px;
+  background: var(--color-border);
 }
 </style>

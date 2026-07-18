@@ -2,12 +2,12 @@ export interface ProductMission {
   id?: number
   name: string
   maxNgCount: number | null
-  passwordRequiredAfterNg: number  // 0 | 1
-  enabled: number                  // 0 | 1
-  multiDeviceIndependent: number   // 0 | 1
-  skipScrew: number                // 0 | 1
-  isInspection: number             // 0 | 1
-  inspectionScope: number   // 0 = NONE | 1 = ALL | 2 = CHOSEN
+  passwordRequiredAfterNg: boolean
+  enabled: boolean
+  multiDeviceIndependent: boolean
+  skipScrew: boolean
+  isInspection: boolean
+  inspectionScope: number
   createTime?: string
   modifyTime?: string
 }
