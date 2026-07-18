@@ -1,5 +1,5 @@
 import { get, post, put, del } from './request'
-import type { ProductMission, MissionQuery } from '@/shared/types/mission'
+import type { ProductMission, MissionQuery, InspectionMissionBinding } from '@/shared/types/mission'
 
 const BASE = '/api/missions'
 
@@ -8,7 +8,6 @@ function toApi(data: ProductMission): Record<string, unknown> {
     ...data,
     enabled: data.enabled ? 1 : 0,
     skipScrew: data.skipScrew ? 1 : 0,
-    passwordRequiredAfterNg: data.passwordRequiredAfterNg ? 1 : 0,
     multiDeviceIndependent: data.multiDeviceIndependent ? 1 : 0,
     isInspection: data.isInspection ? 1 : 0,
   }
@@ -19,7 +18,6 @@ function fromApi(raw: Record<string, unknown>): ProductMission {
     ...raw,
     enabled: raw.enabled === 1,
     skipScrew: raw.skipScrew === 1,
-    passwordRequiredAfterNg: raw.passwordRequiredAfterNg === 1,
     multiDeviceIndependent: raw.multiDeviceIndependent === 1,
     isInspection: raw.isInspection === 1,
   } as ProductMission
@@ -56,4 +54,18 @@ export function updateMission(id: number, data: ProductMission) {
 
 export function deleteMission(id: number) {
   return del(`${BASE}/${id}`)
+}
+
+// ---- Inspection Mission Bindings ----
+
+export async function fetchInspectionBindings(missionId: number) {
+  return get<InspectionMissionBinding[]>(`${BASE}/${missionId}/inspection-bindings`)
+}
+
+export function addInspectionBinding(missionId: number, boundMissionId: number) {
+  return post(`${BASE}/${missionId}/inspection-bindings`, { boundMissionId })
+}
+
+export function deleteInspectionBinding(missionId: number, bindingId: number) {
+  return del(`${BASE}/${missionId}/inspection-bindings/${bindingId}`)
 }

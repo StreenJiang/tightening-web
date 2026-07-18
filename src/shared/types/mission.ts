@@ -2,7 +2,7 @@ export interface ProductMission {
   id?: number
   name: string
   maxNgCount: number | null
-  passwordRequiredAfterNg: boolean
+  passwordRequiredNgCount: number | null
   enabled: boolean
   multiDeviceIndependent: boolean
   skipScrew: boolean
@@ -10,6 +10,12 @@ export interface ProductMission {
   inspectionScope: number
   createTime?: string
   modifyTime?: string
+}
+
+export interface InspectionMissionBinding {
+  id?: number
+  inspectionMissionId: number
+  boundMissionId: number
 }
 
 export interface MissionQuery {

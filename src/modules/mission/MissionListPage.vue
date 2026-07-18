@@ -20,6 +20,10 @@ const router = useRouter()
 const store = useMissionStore()
 const confirm = useConfirm()
 
+const missionGridRef = ref<HTMLDivElement>()
+let gridResizeObserver: ResizeObserver | null = null
+let gridRafId: number | null = null
+
 const searchInput = ref('')
 let searchTimer: ReturnType<typeof setTimeout>
 
@@ -50,9 +54,28 @@ onMounted(() => {
   const name = route.query.name ? String(route.query.name) : ''
   searchInput.value = name
   store.loadMissions({ page, name })
+
+  // Force grid auto-fill recalculation after sidebar CSS transition ends
+  gridResizeObserver = new ResizeObserver((entries) => {
+    if (gridRafId !== null) return
+    gridRafId = requestAnimationFrame(() => {
+      gridRafId = null
+      const el = entries[0]?.target as HTMLDivElement | undefined
+      if (!el) return
+      el.style.gridTemplateColumns = '1fr'
+      el.getBoundingClientRect()
+      el.style.gridTemplateColumns = ''
+    })
+  })
+  if (missionGridRef.value) {
+    gridResizeObserver.observe(missionGridRef.value)
+  }
 })
 
-onUnmounted(() => clearTimeout(searchTimer))
+onUnmounted(() => {
+  clearTimeout(searchTimer)
+  gridResizeObserver?.disconnect()
+})
 
 function onSearchInput() {
   clearTimeout(searchTimer)
@@ -160,7 +183,7 @@ function inspectionLabel(m: ProductMission): string {
       :pt="dataviewPt"
     >
       <template #grid="slotProps">
-        <div class="mission-grid">
+        <div ref="missionGridRef" class="mission-grid">
           <div
             v-for="m in slotProps.items"
             :key="m.id"
@@ -263,6 +286,7 @@ function inspectionLabel(m: ProductMission): string {
   min-height: 0;
   overflow: auto;
   background: transparent;
+  scrollbar-gutter: stable;
 }
 
 .mission-grid {

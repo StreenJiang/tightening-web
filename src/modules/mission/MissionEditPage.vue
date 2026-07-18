@@ -3,10 +3,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import MissionBasicForm from './components/MissionBasicForm.vue'
-import ScrollPanel from 'primevue/scrollpanel'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Breadcrumb from 'primevue/breadcrumb'
+import Tag from 'primevue/tag'
+import Skeleton from 'primevue/skeleton'
 import { fetchMission, createMission, updateMission } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -27,7 +28,7 @@ const form = ref<ProductMission>({
   name: '',
   enabled: true,
   maxNgCount: null,
-  passwordRequiredAfterNg: false,
+  passwordRequiredNgCount: null,
   multiDeviceIndependent: false,
   skipScrew: false,
   isInspection: false,
@@ -35,6 +36,7 @@ const form = ref<ProductMission>({
 })
 
 let snapshot = ''
+let leavingConfirmed = false
 
 onMounted(async () => {
   if (isEdit && id) {
@@ -62,6 +64,10 @@ async function handleSave() {
   const name = form.value.name.trim()
   if (!name) {
     toast.add({ severity: 'error', detail: t('mission.edit.nameRequired'), life: 3000 })
+    return
+  }
+  if (form.value.isInspection && form.value.inspectionScope === 0) {
+    toast.add({ severity: 'error', detail: t('mission.edit.scopeRequired'), life: 3000 })
     return
   }
   saving.value = true
@@ -95,6 +101,7 @@ async function handleBack() {
       rejectLabel: t('mission.edit.unsavedStay'),
       acceptLabel: t('mission.edit.unsavedLeave'),
       accept: () => {
+        leavingConfirmed = true
         router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
       },
     })
@@ -104,6 +111,7 @@ async function handleBack() {
 }
 
 onBeforeRouteLeave(async (_to, _from) => {
+  if (leavingConfirmed) return
   if (isDirty()) {
     const leave = await new Promise<boolean>((resolve) => {
       confirm.require({
@@ -124,6 +132,22 @@ const title = computed(() =>
     ? t('mission.edit.editTitle', { name: form.value.name })
     : t('mission.edit.createTitle'),
 )
+
+function formatDateTime(iso?: string): string {
+  if (!iso) return ''
+  return iso.slice(0, 19).replace('T', ' ')
+}
+
+const metaItems = computed(() => {
+  const items: { label: string; value: string }[] = []
+  if (form.value.createTime) {
+    items.push({ label: t('mission.edit.metaCreateTime'), value: formatDateTime(form.value.createTime) })
+  }
+  if (form.value.modifyTime) {
+    items.push({ label: t('mission.edit.metaModifyTime'), value: formatDateTime(form.value.modifyTime) })
+  }
+  return items
+})
 
 function goToMissionList(e: { originalEvent: Event }) {
   router.push('/mission')
@@ -151,24 +175,15 @@ const breadcrumbItems = computed(() => [
         @click="handleBack"
       />
       <h1 class="edit-title">{{ title }}</h1>
+      <Tag v-if="!isEdit" severity="warn" :value="t('mission.edit.statusDraft')" />
     </nav>
 
-    <ScrollPanel class="edit-body">
-      <div v-if="loading" class="skeleton-container">
-        <div class="skeleton-group">
-          <div class="skeleton-title" />
-          <div class="skeleton-input" />
-          <div class="skeleton-input short" />
-        </div>
-        <div class="skeleton-group">
-          <div class="skeleton-title" />
-          <div class="skeleton-input short" />
-          <div class="skeleton-input" />
-          <div class="skeleton-input" />
-        </div>
-        <div class="skeleton-group">
-          <div class="skeleton-title" />
-          <div class="skeleton-input short" />
+    <div class="edit-body">
+      <div v-if="loading" class="skeleton-layout">
+        <div class="skeleton-main">
+          <Skeleton height="140px" border-radius="12px" class="skeleton-card" />
+          <Skeleton height="210px" border-radius="12px" class="skeleton-card" />
+          <Skeleton height="120px" border-radius="12px" />
         </div>
       </div>
 
@@ -178,27 +193,23 @@ const breadcrumbItems = computed(() => [
         </div>
 
         <aside v-if="isEdit" class="edit-sidebar">
-          <Card>
-            <template #title>{{ t('mission.edit.meta') }}</template>
+          <Card class="meta-card">
+            <template #title>
+              <div class="meta-header">{{ t('mission.edit.meta') }}</div>
+            </template>
             <template #content>
-              <dl class="side-meta">
-                <template v-if="form.createTime">
-                  <dt>创建时间</dt>
-                  <dd>{{ form.createTime }}</dd>
-                </template>
-                <template v-if="form.modifyTime">
-                  <dt>修改时间</dt>
-                  <dd>{{ form.modifyTime }}</dd>
-                </template>
-                <template v-if="!form.createTime && !form.modifyTime">
-                  <dd class="side-empty">暂无记录</dd>
+              <dl v-if="metaItems.length > 0" class="side-meta">
+                <template v-for="item in metaItems" :key="item.label">
+                  <dt>{{ item.label }}</dt>
+                  <dd>{{ item.value }}</dd>
                 </template>
               </dl>
+              <p v-else class="side-empty">{{ t('mission.edit.metaEmpty') }}</p>
             </template>
           </Card>
         </aside>
       </div>
-    </ScrollPanel>
+    </div>
 
     <div class="edit-actions">
       <Button
@@ -223,21 +234,20 @@ const breadcrumbItems = computed(() => [
   height: 100%;
 }
 
+.edit-breadcrumb {
+  padding: 0;
+  background: transparent;
+  border: none;
+  margin-bottom: 8px;
+}
+
 .edit-nav {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
-  padding: 12px 20px;
-  background: var(--color-surface);
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
+  margin-bottom: 20px;
+  padding: 0 4px;
   flex-shrink: 0;
-}
-
-.edit-body {
-  flex: 1;
-  min-height: 0;
 }
 
 .edit-title {
@@ -247,63 +257,67 @@ const breadcrumbItems = computed(() => [
   letter-spacing: -0.3px;
 }
 
+.edit-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .edit-layout {
   display: flex;
-  gap: 48px;
+  gap: 28px;
   align-items: flex-start;
 }
 
 .edit-main {
   flex: 1;
   min-width: 0;
-  contain: layout style;
 }
 
 .edit-sidebar {
-  width: 220px;
+  width: 180px;
   flex-shrink: 0;
-  position: sticky;
-  top: 16px;
+}
+
+.meta-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.meta-header {
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .side-meta { margin: 0; }
 .side-meta dt {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin: 12px 0 2px 0;
+  font-size: 11px;
+  color: var(--p-surface-500);
+  margin: 10px 0 2px 0;
 }
 .side-meta dt:first-child { margin-top: 0; }
-.side-meta dd { font-size: 14px; font-weight: 500; margin: 0; }
-.side-empty { font-size: 13px; color: var(--color-text-secondary); }
+.side-meta dd { font-size: 13px; font-weight: 500; margin: 0; word-break: break-all; }
+.side-empty { font-size: 13px; color: var(--p-surface-500); margin: 0; }
 
 .edit-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 16px;
-  padding: 12px 20px;
-  background: var(--color-surface);
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
+  margin-top: 20px;
+  padding: 0 4px;
   flex-shrink: 0;
 }
 
-.skeleton-container { max-width: 640px; }
-.skeleton-group { margin-bottom: 32px; }
-.skeleton-title {
-  width: 80px; height: 12px; border-radius: 3px;
-  background: var(--color-border); margin-bottom: 16px;
+/* Skeleton loading */
+.skeleton-layout {
+  display: flex;
 }
-.skeleton-input {
-  width: 100%; height: 36px; border-radius: 4px;
-  background: var(--color-border); margin-bottom: 8px;
+.skeleton-card {
+  margin-bottom: 16px;
 }
-.skeleton-input.short { width: 72px; }
-
-.edit-breadcrumb {
-  padding: 0;
-  background: transparent;
-  border: none;
-  margin-bottom: 8px;
+.skeleton-main {
+  flex: 1;
+  min-width: 0;
 }
 </style>

@@ -77,6 +77,7 @@
     "edit": {
       "createTitle": "New Mission",
       "editTitle": "Edit Mission - {name}",
+      "statusDraft": "Draft",
       "back": "Back to list",
       "groups": { "basic": "Basic Properties", "execution": "Execution Controls", "inspection": "Inspection Config" },
       "fields": {
@@ -88,14 +89,23 @@
         "inspectionSelectMissions": "Select missions to bind"
       },
       "meta": "Info",
+      "metaCreateTime": "Created",
+      "metaModifyTime": "Modified",
+      "metaEmpty": "No records",
       "save": "Save", "saving": "Saving...", "cancel": "Cancel",
       "unsavedTitle": "Unsaved Changes",
       "unsavedMessage": "Unsaved changes will be lost. Leave?",
       "unsavedLeave": "Leave",
       "unsavedStay": "Stay",
-      "nameDuplicate": "Mission name already exists", "nameRequired": "Mission name is required",
+      "nameDuplicate": "Mission name already exists", "nameRequired": "Mission name is required", "scopeRequired": "Inspection scope is required",
       "saveSuccess": "Saved successfully", "saveFailed": "Save failed",
-      "loadFailed": "Failed to load mission"
+      "loadFailed": "Failed to load mission",
+      "inspectionDialogTitle": "Inspection Config",
+      "inspectionDialogOk": "OK",
+      "inspectionDiscardTitle": "Discard Changes?",
+      "inspectionDiscardMessage": "Changes to inspection config will be lost. Discard?",
+      "inspectionDiscardLeave": "Discard",
+      "inspectionDiscardStay": "Continue"
     },
     "delete": {
       "confirm": "Delete {name}? This cannot be undone.",
