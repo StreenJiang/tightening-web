@@ -53,12 +53,19 @@
     "latency": "Latency",
     "latencyValue": "{n}ms latency"
   },
+  "breadcrumb": {
+    "mission": "Mission",
+    "missionList": "Mission List",
+    "missionNew": "New Mission",
+    "missionEdit": "Edit Mission"
+  },
   "mission": {
     "list": {
       "search": "Search mission name...",
       "create": "New Mission",
       "empty": "No missions",
       "emptyHint": "Create your first mission",
+      "noResult": "No matching missions found",
       "deleteConfirm": "Delete mission {name}?",
       "thumbnail": "Mission thumbnail",
       "paginationPrev": "Older",

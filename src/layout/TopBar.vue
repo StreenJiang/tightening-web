@@ -7,7 +7,6 @@ import { useServerConnectionStore } from '@/stores/serverConnection'
 import type { ThemeMode } from '@/stores/theme'
 import Toolbar from 'primevue/toolbar'
 import Button from 'primevue/button'
-import Popover from 'primevue/popover'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
@@ -19,7 +18,6 @@ const conn = useServerConnectionStore()
 
 const configModalVisible = ref(false)
 const statusModalVisible = ref(false)
-const themeOp = ref<InstanceType<typeof Popover> | null>(null)
 
 function toggleLocale() {
   locale.value = locale.value === 'zh-CN' ? 'en' : 'zh-CN'
@@ -27,31 +25,28 @@ function toggleLocale() {
 
 const localeLabel = computed(() => locale.value === 'zh-CN' ? 'EN' : '中')
 
-function selectTheme(m: ThemeMode) {
-  theme.setMode(m)
-  themeOp.value?.hide()
+function toggleTheme() {
+  const next: ThemeMode = theme.mode === 'dark' ? 'light' : 'dark'
+  theme.setMode(next)
 }
 
-const themeOptions: { mode: ThemeMode; key: string; icon: string }[] = [
-  { mode: 'light', key: 'common.themeLight', icon: 'pi pi-sun' },
-  { mode: 'dark', key: 'common.themeDark', icon: 'pi pi-moon' },
-  { mode: 'system', key: 'common.themeSystem', icon: 'pi pi-palette' },
-]
+const themeIcon = computed(() => theme.mode === 'dark' ? 'pi pi-sun' : 'pi pi-moon')
 
-const connLabel = computed(() => {
-  const map: Record<string, string> = {
-    connected: 'server.connected',
-    disconnected: 'server.disconnected',
-    unconfigured: 'server.unconfigured',
-    loading: 'server.connecting',
-  }
-  return t(map[conn.status] ?? 'server.unconfigured')
-})
+const CONN_LABEL_KEYS: Record<string, string> = {
+  connected: 'server.connected',
+  disconnected: 'server.disconnected',
+  unconfigured: 'server.unconfigured',
+  loading: 'server.connecting',
+}
+
+const connLabel = computed(() => t(CONN_LABEL_KEYS[conn.status] ?? 'server.unconfigured'))
+
+const connDialogTitle = computed(() => conn.status === 'connected' ? t('server.connected') : t('server.disconnectTitle'))
 
 function onConnClick() {
   if (conn.status === 'unconfigured') {
     configModalVisible.value = true
-  } else if (conn.status === 'disconnected') {
+  } else {
     statusModalVisible.value = true
   }
 }
@@ -113,30 +108,21 @@ onMounted(() => conn.fetchStatus())
         @click="sidebar.toggle()"
       />
       <span class="topbar-title">{{ t('app.title') }}</span>
-      <Button severity="secondary" text class="conn-btn" @click="onConnClick">
-        <template #icon>
-          <span class="conn-dot" :class="'conn-dot--' + conn.status" />
-        </template>
+      <Button
+        severity="secondary" text class="conn-btn"
+        @click="onConnClick"
+      >
+        <span class="conn-dot" :class="'conn-dot--' + conn.status" />
         <span class="conn-label">{{ connLabel }}</span>
       </Button>
     </template>
 
     <template #end>
       <Button
-        :icon="themeOptions.find(o => o.mode === theme.mode)?.icon ?? 'pi pi-palette'"
+        :icon="themeIcon"
         severity="secondary" text rounded
-        @click="(e: Event) => themeOp?.toggle(e)"
+        @click="toggleTheme"
       />
-      <Popover ref="themeOp">
-        <div class="theme-popover">
-          <Button
-            v-for="opt in themeOptions" :key="opt.mode"
-            :icon="opt.icon" :label="t(opt.key)"
-            :severity="theme.mode === opt.mode ? 'primary' : 'secondary'" text
-            @click="selectTheme(opt.mode)"
-          />
-        </div>
-      </Popover>
 
       <Button
         :label="localeLabel" severity="secondary" text rounded
@@ -149,15 +135,31 @@ onMounted(() => conn.fetchStatus())
   <!-- Connection status dialog -->
   <Dialog
     v-model:visible="statusModalVisible"
-    :header="t('server.disconnectTitle')" modal
+    :header="connDialogTitle" modal
+    :pt="{ root: { style: { width: '380px' } } }"
   >
     <div style="display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;align-items:center;gap:8px">
-        <i class="pi pi-exclamation-circle" style="color:var(--p-yellow-500);font-size:18px" />
-        <span>{{ t('server.disconnected') }}</span>
+        <i
+          :class="conn.status === 'connected' ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"
+          :style="{ color: conn.status === 'connected' ? 'var(--p-green-500)' : 'var(--p-yellow-500)', fontSize: '18px' }"
+        />
+        <span>{{ connLabel }}</span>
       </div>
       <div
-        v-if="conn.errorReason"
+        v-if="conn.status === 'connected' && conn.address"
+        class="status-detail"
+      >
+        {{ conn.address }}
+      </div>
+      <div
+        v-if="conn.status === 'connected' && conn.latency !== undefined"
+        style="font-size:13px;color:var(--color-text-secondary)"
+      >
+        {{ t('server.latencyValue', { n: conn.latency }) }}
+      </div>
+      <div
+        v-if="conn.status === 'disconnected' && conn.errorReason"
         style="font-size:13px;color:var(--color-text-secondary)"
       >
         {{ t('server.reason') }}: {{ conn.errorReason }}
@@ -165,8 +167,14 @@ onMounted(() => conn.fetchStatus())
     </div>
     <template #footer>
       <Button
+        v-if="conn.status === 'disconnected'"
         icon="pi pi-refresh" :label="t('server.manualReconnect')"
         @click="conn.reconnect()"
+      />
+      <Button
+        v-else
+        :label="t('common.close')" severity="secondary" text
+        @click="statusModalVisible = false"
       />
     </template>
   </Dialog>
@@ -220,13 +228,21 @@ onMounted(() => conn.fetchStatus())
   font-size: 16px;
   font-weight: 600;
   margin: 0 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .conn-btn {
   flex-shrink: 0;
+  min-width: fit-content;
+  gap: 4px;
 }
 .conn-dot {
   width: 10px; height: 10px; border-radius: 50%;
   background: var(--p-gray-400);
+  display: inline-block;
+  flex-shrink: 0;
 }
 .conn-dot--connected { background: var(--p-green-500); }
 .conn-dot--disconnected { background: var(--p-red-500); }
@@ -235,13 +251,11 @@ onMounted(() => conn.fetchStatus())
 
 .conn-label {
   font-size: 13px;
-  margin-left: 4px;
   white-space: nowrap;
 }
-.theme-popover {
-  display: flex;
-  flex-direction: column;
-  padding: 4px;
-  min-width: 150px;
+
+.status-detail {
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 </style>

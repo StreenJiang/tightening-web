@@ -18,7 +18,7 @@ app.use(router)
 app.use(PrimeVue, {
   theme: {
     preset: tighteningPreset,
-    options: { darkModeSelector: 'html.dark' },
+    options: { darkModeSelector: '.dark' },
   },
   ripple: false,
 })

@@ -53,12 +53,19 @@
     "latency": "延迟",
     "latencyValue": "延迟 {n}ms"
   },
+  "breadcrumb": {
+    "mission": "任务管理",
+    "missionList": "任务列表",
+    "missionNew": "新建任务",
+    "missionEdit": "编辑任务"
+  },
   "mission": {
     "list": {
       "search": "搜索任务名称...",
       "create": "新建任务",
       "empty": "暂无任务",
       "emptyHint": "点击新建创建第一个拧紧任务",
+      "noResult": "未找到匹配的任务",
       "deleteConfirm": "确定删除任务 {name}？",
       "thumbnail": "任务缩略图",
       "paginationPrev": "较旧",

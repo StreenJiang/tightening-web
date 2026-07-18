@@ -6,6 +6,7 @@ import MissionBasicForm from './components/MissionBasicForm.vue'
 import ScrollPanel from 'primevue/scrollpanel'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
+import Breadcrumb from 'primevue/breadcrumb'
 import { fetchMission, createMission, updateMission } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -123,10 +124,26 @@ const title = computed(() =>
     ? t('mission.edit.editTitle', { name: form.value.name })
     : t('mission.edit.createTitle'),
 )
+
+function goToMissionList(e: { originalEvent: Event }) {
+  router.push('/mission')
+  e.originalEvent.preventDefault()
+}
+function breadcrumbNoop(e: { originalEvent: Event }) {
+  e.originalEvent.preventDefault()
+}
+
+const breadcrumbItems = computed(() => [
+  { label: t('breadcrumb.mission'), command: goToMissionList },
+  { label: t('breadcrumb.missionList'), command: goToMissionList },
+  { label: isEdit ? t('breadcrumb.missionEdit') : t('breadcrumb.missionNew'), command: breadcrumbNoop },
+])
 </script>
 
 <template>
   <div class="edit-page">
+    <Breadcrumb :model="breadcrumbItems" class="edit-breadcrumb" />
+
     <nav class="edit-nav">
       <Button
         icon="pi pi-arrow-left" severity="secondary" text rounded
@@ -282,4 +299,11 @@ const title = computed(() =>
   background: var(--color-border); margin-bottom: 8px;
 }
 .skeleton-input.short { width: 72px; }
+
+.edit-breadcrumb {
+  padding: 0;
+  background: transparent;
+  border: none;
+  margin-bottom: 8px;
+}
 </style>

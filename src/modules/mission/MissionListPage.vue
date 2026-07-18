@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import Card from 'primevue/card'
-import ScrollPanel from 'primevue/scrollpanel'
+import DataView from 'primevue/dataview'
+import Breadcrumb from 'primevue/breadcrumb'
+import Paginator from 'primevue/paginator'
 import ToggleSwitch from 'primevue/toggleswitch'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
@@ -21,6 +22,28 @@ const confirm = useConfirm()
 
 const searchInput = ref('')
 let searchTimer: ReturnType<typeof setTimeout>
+
+const ROWS_PER_PAGE = [10, 20, 50]
+const dataviewPt = {
+  root: { style: { background: 'transparent' } },
+  content: { style: { background: 'transparent' } },
+  grid: { style: { background: 'transparent' } },
+}
+
+function goToMissionList(e: { originalEvent: Event }) {
+  router.push('/mission')
+  e.originalEvent.preventDefault()
+}
+function breadcrumbNoop(e: { originalEvent: Event }) {
+  e.originalEvent.preventDefault()
+}
+
+const breadcrumbItems = computed(() => [
+  { label: t('breadcrumb.mission'), command: goToMissionList },
+  { label: t('breadcrumb.missionList'), command: breadcrumbNoop },
+])
+
+const paginatorFirst = computed(() => (store.pagination.page - 1) * store.pagination.size)
 
 onMounted(() => {
   const page = route.query.page ? Number(route.query.page) : 1
@@ -41,10 +64,13 @@ function onSearchInput() {
   }, 300)
 }
 
-function goToPage(page: number) {
+function onPageChange(event: { first: number; rows: number; page: number; pageCount?: number }) {
+  const page = event.page + 1
+  const name = store.searchName || undefined
   store.pagination.page = page
-  store.loadMissions({ page })
-  router.replace({ query: { page, name: store.searchName || undefined } })
+  store.pagination.size = event.rows
+  store.loadMissions({ page, name })
+  router.replace({ query: { page, name } })
 }
 
 function goToCreate() {
@@ -75,6 +101,9 @@ function inspectionLabel(m: ProductMission): string {
 
 <template>
   <div class="list-page">
+    <!-- Breadcrumb -->
+    <Breadcrumb :model="breadcrumbItems" class="list-breadcrumb" />
+
     <!-- Toolbar -->
     <div class="list-toolbar">
       <IconField>
@@ -95,17 +124,22 @@ function inspectionLabel(m: ProductMission): string {
 
     <!-- Skeleton -->
     <div v-if="store.loading" class="skeleton-list">
-      <div v-for="n in 5" :key="n" class="skeleton-row">
+      <div v-for="n in 5" :key="n" class="skeleton-card">
         <div class="sk-thumb" />
-        <div class="sk-name" />
-        <div class="sk-toggle" />
-        <div class="sk-tag" />
-        <div class="sk-action" />
-        <div class="sk-action" />
+        <div class="sk-body">
+          <div class="sk-line wide" />
+          <div class="sk-line narrow" />
+        </div>
       </div>
     </div>
 
-    <!-- Empty -->
+    <!-- Empty: search with no results -->
+    <div v-else-if="store.missions.length === 0 && searchInput" class="empty-state">
+      <i class="pi pi-search" style="font-size:56px;opacity:0.12;margin-bottom:16px" />
+      <p class="empty-title">{{ t('mission.list.noResult') }}</p>
+    </div>
+
+    <!-- Empty: no missions at all -->
     <div v-else-if="store.missions.length === 0" class="empty-state">
       <i class="pi pi-clipboard" style="font-size:56px;opacity:0.12;margin-bottom:16px" />
       <p class="empty-title">{{ t('mission.list.empty') }}</p>
@@ -117,81 +151,74 @@ function inspectionLabel(m: ProductMission): string {
       />
     </div>
 
-    <!-- List -->
-    <Card v-else class="list-card">
-      <template #content>
-        <div class="list-header" role="row">
-          <span class="col-thumb" />
-          <span class="col-name" role="columnheader">{{ t('mission.list.columns.name') }}</span>
-          <span class="col-status" role="columnheader">{{ t('mission.list.columns.enabled') }}</span>
-          <span class="col-inspection" role="columnheader">{{ t('mission.list.columns.inspection') }}</span>
-          <span class="col-actions" role="columnheader" />
-        </div>
+    <!-- DataView Grid Cards -->
+    <DataView
+      v-else
+      :value="store.missions"
+      layout="grid"
+      class="list-dataview"
+      :pt="dataviewPt"
+    >
+      <template #grid="slotProps">
+        <div class="mission-grid">
+          <div
+            v-for="m in slotProps.items"
+            :key="m.id"
+            class="mission-card"
+            @click="goToEdit(m)"
+          >
+            <div class="card-thumb">
+              <i class="pi pi-image" />
+              <span v-if="m.isInspection" class="inspection-badge">
+                <i class="pi pi-verified" />
+                <span>{{ inspectionLabel(m) }}</span>
+              </span>
+            </div>
 
-        <ScrollPanel class="list-scroll">
-          <div class="mission-list" role="table" aria-label="Mission list">
-            <div
-              v-for="m in store.missions"
-              :key="m.id"
-              class="list-row"
-              role="row"
-              @click="goToEdit(m)"
-            >
-              <span class="col-thumb">
-                <span class="thumb-frame">
-                  <i class="pi pi-image" style="font-size:32px;opacity:0.25" />
-                </span>
-              </span>
-              <span class="col-name">
-                <span class="mission-name">{{ m.name }}</span>
-              </span>
-              <span class="col-status" @click.stop>
+            <div class="card-body">
+              <span class="card-name">{{ m.name }}</span>
+
+              <div class="card-footer" @click.stop>
                 <ToggleSwitch
                   :model-value="m.enabled"
                   @update:model-value="store.toggleEnabled(m)"
                 />
-              </span>
-              <span class="col-inspection">
-                <span v-if="m.isInspection" class="inspection-badge">
-                  <i class="pi pi-verified" style="font-size:14px" />
-                  <span>{{ inspectionLabel(m) }}</span>
-                </span>
-                <span v-else class="inspection-dash">—</span>
-              </span>
-              <span class="col-actions" @click.stop>
-                <Button
-                  icon="pi pi-pencil" severity="secondary" text rounded
-                  :aria-label="String(t('mission.list.action.edit'))"
-                  @click="goToEdit(m)"
-                />
-                <Button
-                  icon="pi pi-trash" severity="danger" text rounded
-                  :aria-label="String(t('mission.list.action.delete'))"
-                  @click="handleDelete(m)"
-                />
-              </span>
+                <div class="card-actions">
+                  <Button
+                    icon="pi pi-pencil"
+                    severity="secondary"
+                    text
+                    rounded
+                    :aria-label="String(t('mission.list.action.edit'))"
+                    @click="goToEdit(m)"
+                  />
+                  <Button
+                    icon="pi pi-trash"
+                    severity="danger"
+                    text
+                    rounded
+                    :aria-label="String(t('mission.list.action.delete'))"
+                    @click="handleDelete(m)"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </ScrollPanel>
+        </div>
       </template>
-    </Card>
+    </DataView>
 
-    <!-- Pagination -->
-    <div v-if="store.missions.length > 0" class="pagination">
-      <Button
-        :label="'← ' + t('mission.list.paginationPrev')"
-        severity="secondary" text size="small"
-        :disabled="store.pagination.page <= 1"
-        @click="goToPage(store.pagination.page - 1)"
-      />
-      <span class="page-num">{{ store.pagination.page }}</span>
-      <Button
-        :label="t('mission.list.paginationNext') + ' →'"
-        severity="secondary" text size="small"
-        :disabled="store.missions.length < store.pagination.size"
-        @click="goToPage(store.pagination.page + 1)"
-      />
-    </div>
+    <!-- Paginator -->
+    <Paginator
+      v-if="store.missions.length > 0"
+      :rows="store.pagination.size"
+      :total-records="store.pagination.total || store.missions.length"
+      :first="paginatorFirst"
+      :rows-per-page-options="ROWS_PER_PAGE"
+      :always-show="true"
+      class="list-paginator"
+      @page="onPageChange"
+    />
   </div>
 </template>
 
@@ -200,7 +227,21 @@ function inspectionLabel(m: ProductMission): string {
   display: flex;
   flex-direction: column;
   height: 100%;
-  contain: layout style;
+  --card-grid-cols: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+@media (min-width: 1800px) {
+  .list-page {
+    --card-grid-cols: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+.list-breadcrumb {
+  padding: 0;
+  background: transparent;
+  border: none;
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .list-toolbar {
@@ -211,87 +252,113 @@ function inspectionLabel(m: ProductMission): string {
   flex-shrink: 0;
 }
 
-.list-card {
+.list-toolbar :deep(.p-iconfield) {
+  flex: 1;
+  max-width: 480px;
+}
+
+/* ---- DataView Grid ---- */
+.list-dataview {
   flex: 1;
   min-height: 0;
+  overflow: auto;
+  background: transparent;
+}
+
+.mission-grid {
+  display: grid;
+  grid-template-columns: var(--card-grid-cols);
+  gap: 16px;
+}
+
+.mission-card {
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
   overflow: hidden;
-}
-
-.list-scroll {
-  flex: 1;
-  min-height: 0;
-}
-
-.list-header {
-  display: flex;
-  align-items: center;
-  height: 36px;
-  padding: 0 20px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.list-row {
-  display: flex;
-  align-items: center;
-  height: 72px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
-  transition: background 100ms;
+  transition: box-shadow 150ms, border-color 150ms;
+  background: var(--color-surface);
 }
 
-.list-row:last-child { border-bottom: none; }
-.list-row:hover { background: rgba(0, 0, 0, 0.02); }
-html.dark .list-row:hover { background: rgba(255, 255, 255, 0.02); }
+.mission-card:hover {
+  border-color: var(--p-primary-300);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
 
-.col-thumb { width: 72px; flex-shrink: 0; display: flex; align-items: center; }
-.col-name { flex: 1; min-width: 0; padding: 0 16px; }
-.col-status { width: 72px; flex-shrink: 0; display: flex; justify-content: center; }
-.col-inspection { width: 90px; flex-shrink: 0; display: flex; justify-content: center; }
-.col-actions { width: 80px; flex-shrink: 0; display: flex; gap: 4px; justify-content: flex-end; }
+html.dark .mission-card:hover {
+  border-color: var(--p-primary-600);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
 
-.thumb-frame {
-  width: 52px; height: 52px;
-  border-radius: 6px;
+/* ---- Thumbnail ---- */
+.card-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
   background: var(--color-bg);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.mission-name {
-  font-size: 14px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.card-thumb .pi-image {
+  font-size: 48px;
+  opacity: 0.15;
 }
 
 .inspection-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--p-primary-500);
-  background: var(--p-primary-50);
-  padding: 3px 10px;
+  gap: 5px;
+  font-size: 13px;
+  padding: 4px 12px;
   border-radius: 4px;
+  color: var(--p-highlight-color);
+  background: var(--p-highlight-background);
 }
 
-.inspection-dash {
+/* ---- Body ---- */
+.card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--color-text-secondary);
-  font-size: 14px;
 }
 
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ---- Paginator ---- */
+.list-paginator {
+  flex-shrink: 0;
+  margin-top: 16px;
+}
+
+
+/* ---- Empty ---- */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -311,45 +378,37 @@ html.dark .list-row:hover { background: rgba(255, 255, 255, 0.02); }
   margin: 0 0 16px 0;
 }
 
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 16px;
+/* ---- Skeleton ---- */
+.skeleton-list {
+  display: grid;
+  grid-template-columns: var(--card-grid-cols);
+  gap: 16px;
 }
 
-.page-num {
-  font-size: 14px;
-  font-weight: 500;
-  min-width: 24px;
-  text-align: center;
+.skeleton-card {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.skeleton-list { padding: 8px 0; }
-.skeleton-row {
-  display: flex; align-items: center; height: 80px;
-  padding: 10px 12px; gap: 12px;
-  border-bottom: 1px solid var(--color-border);
-}
 .sk-thumb {
-  width: 60px; height: 60px; border-radius: 6px;
-  background: var(--color-border); flex-shrink: 0;
+  aspect-ratio: 4 / 3;
+  background: var(--color-border);
 }
-.sk-name {
-  width: 140px; height: 16px; border-radius: 4px;
-  background: var(--color-border); flex: 1;
+
+.sk-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.sk-toggle {
-  width: 32px; height: 20px; border-radius: 10px;
-  background: var(--color-border); flex-shrink: 0;
+
+.sk-line {
+  height: 14px;
+  border-radius: 4px;
+  background: var(--color-border);
 }
-.sk-tag {
-  width: 48px; height: 20px; border-radius: 4px;
-  background: var(--color-border); flex-shrink: 0;
-}
-.sk-action {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--color-border); flex-shrink: 0;
-}
+
+.sk-line.wide { width: 60%; }
+.sk-line.narrow { width: 35%; }
 </style>
