@@ -16,10 +16,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return handleResponse<T>(res)
 }
 
-export async function upload<T>(method: string, path: string, formData: FormData): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { method, body: formData })
-  return handleResponse<T>(res)
-}
-
 export const get = <T>(path: string) => request<T>('GET', path)
+export const post = <T>(path: string, body?: unknown) => request<T>('POST', path, body)
+export const put = <T>(path: string, body?: unknown) => request<T>('PUT', path, body)
 export const del = (path: string) => request<void>('DELETE', path)

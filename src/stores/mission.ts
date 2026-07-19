@@ -29,6 +29,8 @@ export const useMissionStore = defineStore('mission', () => {
       pagination.value.total = data.total
       pagination.value.size = data.size
       pagination.value.page = data.current
+    } catch (e) {
+      toast.add({ severity: 'error', summary: '错误', detail: `加载任务列表失败: ${(e as Error).message}`, life: 5000 })
     } finally {
       loading.value = false
     }
@@ -43,18 +45,23 @@ export const useMissionStore = defineStore('mission', () => {
         ...baseFields(mission),
         prerequisites: [],
         barcodeRules: [],
+        sides: [],
       }
       await saveMission(payload, true)
     } catch (e) {
       mission.enabled = previous
-      toast.add({ severity: 'error', detail: `${t('mission.list.toggleFailed')}: ${(e as Error).message}`, life: 3000 })
+      toast.add({ severity: 'error', summary: '错误', detail: `${t('mission.list.toggleFailed')}: ${(e as Error).message}`, life: 3000 })
     }
   }
 
   async function removeMission(id: number) {
-    await deleteMission(id)
-    await loadMissions()
-    toast.add({ severity: 'success', detail: 'mission.delete.success', life: 3000 })
+    try {
+      await deleteMission(id)
+      await loadMissions()
+      toast.add({ severity: 'success', summary: '成功', detail: t('mission.delete.success'), life: 3000 })
+    } catch (e) {
+      toast.add({ severity: 'error', summary: '错误', detail: `删除失败: ${(e as Error).message}`, life: 5000 })
+    }
   }
 
   return { missions, loading, pagination, searchName, loadMissions, toggleEnabled, removeMission }

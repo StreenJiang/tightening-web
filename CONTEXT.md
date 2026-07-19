@@ -28,6 +28,8 @@
 | 前置任务 | Prerequisite | 任务启动前必须完成的前置依赖任务，按类型区分：同码追溯(SAME_TRACE)、物料码追溯(MATERIAL_TRACE)、巡检链(INSPECTION_CHAIN) |
 | 条码规则 | Barcode Rule | 产品追溯码(PRODUCT_TRACE)或物料码(MATERIAL_BARCODE)的匹配规则，按总长度及/或段位(segment)定义匹配条件 |
 | 巡检绑定 | Inspection Binding | 点检任务与普通拧紧任务之间的绑定关系，表示该拧紧任务的拧紧结果需要纳入点检范围 |
+| 产品面 | ProductSide | 产品的一个可拧紧工作面，包含一张产品图片和该面上所有需要拧紧的螺栓点位 |
+| 螺栓 | ProductBolt | 产品面上的一个拧紧点位，包含序号、程序号(PSet)、力臂坐标、扭矩/角度范围及物料条码关联 |
 
 ## 部署拓扑
 

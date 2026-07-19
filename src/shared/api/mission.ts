@@ -1,9 +1,7 @@
-import { get, del, upload } from './request'
+import { get, post, put, del } from './request'
 import type {
   ProductMission,
   MissionQuery,
-  MissionPrerequisite,
-  BarCodeMatchingRule,
   ProductMissionSavePayload,
 } from '@/shared/types/mission'
 
@@ -44,9 +42,9 @@ export async function fetchMissions(params: MissionQuery) {
   return { ...data, records: data.records.map(fromApi) }
 }
 
-export async function fetchMission(id: number) {
-  const raw = await get<Record<string, unknown>>(`${BASE}/${id}`)
-  return fromApi(raw)
+/** GET /{id} — 后端现返回 ProductMissionDetailDTO（含 sides + Base64 图片） */
+export async function fetchMission(id: number): Promise<ProductMissionSavePayload> {
+  return get<ProductMissionSavePayload>(`${BASE}/${id}`)
 }
 
 export function checkName(name: string, excludeId?: number) {
@@ -60,23 +58,30 @@ export function deleteMission(id: number) {
   return del(`${BASE}/${id}`)
 }
 
-// ---- 统一保存 (multipart/form-data) ----
+// ---- 统一保存 (JSON body, 图片 Base64 编码在产品面里) ----
 
-export async function saveMission(payload: ProductMissionSavePayload, isUpdate: boolean): Promise<string> {
-  const fd = new FormData()
-  fd.append('dto', JSON.stringify(payload))
+export async function saveMission(
+  payload: ProductMissionSavePayload,
+  isUpdate: boolean,
+): Promise<ProductMissionSavePayload> {
   const path = isUpdate && payload.id ? `${BASE}/${payload.id}` : BASE
-  return upload<string>(isUpdate ? 'PUT' : 'POST', path, fd)
+  return isUpdate ? put<ProductMissionSavePayload>(path, payload) : post<ProductMissionSavePayload>(BASE, payload)
 }
 
-// ---- 读取子资源 (GET 端点保留) ----
+// ---- 子资源（从缓存的 detail 返回，避免调用已删除的独立端点） ----
 
-export function fetchPrerequisites(missionId: number) {
-  return get<MissionPrerequisite[]>(`${BASE}/${missionId}/prerequisites`)
+export function cacheDetail(detail: ProductMissionSavePayload) {
+  (window as any).__missionDetail = detail
 }
 
-export function fetchBarcodeRules(missionId: number) {
-  return get<BarCodeMatchingRule[]>(`${BASE}/${missionId}/barcode-rules`)
+function getCachedDetail(): ProductMissionSavePayload | null {
+  return (window as any).__missionDetail ?? null
 }
 
-// ---- 巡检绑定：GET /{id} 已返回 inspectionBoundMissionIds，无需独立 API ----
+export function fetchPrerequisites(_missionId: number): Promise<any[]> {
+  return Promise.resolve(getCachedDetail()?.prerequisites ?? [])
+}
+
+export function fetchBarcodeRules(_missionId: number): Promise<any[]> {
+  return Promise.resolve(getCachedDetail()?.barcodeRules ?? [])
+}

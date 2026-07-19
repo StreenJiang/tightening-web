@@ -10,6 +10,7 @@ import RadioButton from 'primevue/radiobutton'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Tag from 'primevue/tag'
+import { generateUUID } from '@/shared/utils/uuid'
 import { fetchBarcodeRules } from '@/shared/api/mission'
 import type { BarCodeMatchingRule, Segment } from '@/shared/types/mission'
 
@@ -123,6 +124,7 @@ function onDialogOk() {
   if (!hasSegments && !hasLength) {
     toast.add({
       severity: 'warn',
+      summary: '警告',
       detail: t('mission.edit.barcode.atLeastOne'),
       life: 3000,
     })
@@ -134,6 +136,7 @@ function onDialogOk() {
     if (isSegLengthMismatch(seg)) {
       toast.add({
         severity: 'warn',
+        summary: '警告',
         detail: t('mission.edit.barcode.segLengthMismatch'),
         life: 3000,
       })
@@ -165,7 +168,7 @@ function onDialogOk() {
   } else {
     // 新增：给临时负 ID + UUID 便于前置任务关联
     mapped.id = --tempIdCounter
-    mapped.clientRef = crypto.randomUUID()
+    mapped.clientRef = generateUUID()
     rules.value.push(mapped)
   }
   dialogVisible.value = false
@@ -187,7 +190,7 @@ function onDeleteRule(rule: BarCodeMatchingRule) {
     const materialIds = rules.value.filter(r => r.ruleType === 2).map(r => r.id)
     const bound = (props.boundMaterialCodeIds ?? []).filter(id => materialIds.includes(id))
     if (bound.length > 0) {
-      toast.add({ severity: 'warn', detail: t('mission.edit.barcode.deleteBlockedByPrereq'), life: 4000 })
+      toast.add({ severity: 'warn', summary: '警告', detail: t('mission.edit.barcode.deleteBlockedByPrereq'), life: 4000 })
       return
     }
     confirm.require({
@@ -203,7 +206,7 @@ function onDeleteRule(rule: BarCodeMatchingRule) {
   } else {
     // 检查物料码是否被前置任务引用
     if ((props.boundMaterialCodeIds ?? []).includes(rule.id!)) {
-      toast.add({ severity: 'warn', detail: t('mission.edit.barcode.materialBoundToPrereq', { name: rule.name }), life: 3000 })
+      toast.add({ severity: 'warn', summary: '警告', detail: t('mission.edit.barcode.materialBoundToPrereq', { name: rule.name }), life: 3000 })
       return
     }
     confirm.require({
@@ -409,6 +412,9 @@ onMounted(() => {
   justify-content: space-between;
   padding: 8px 12px;
   border-radius: 8px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  margin-bottom: 6px;
 }
 
 .rule-info {

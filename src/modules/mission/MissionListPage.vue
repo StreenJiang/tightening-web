@@ -191,7 +191,8 @@ function inspectionLabel(m: ProductMission): string {
             @click="goToEdit(m)"
           >
             <div class="card-thumb">
-              <i class="pi pi-image" />
+              <img v-if="m.thumbnail" :src="'data:image/jpeg;base64,' + m.thumbnail" class="thumb-img" />
+              <i v-else class="pi pi-image" />
               <span v-if="m.isInspection" class="inspection-badge">
                 <i class="pi pi-verified" />
                 <span>{{ inspectionLabel(m) }}</span>
@@ -329,6 +330,12 @@ html.dark .mission-card:hover {
 .card-thumb .pi-image {
   font-size: 48px;
   opacity: 0.15;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .inspection-badge {

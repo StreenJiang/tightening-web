@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import MissionBasicForm from './components/MissionBasicForm.vue'
@@ -10,10 +10,21 @@ import Button from 'primevue/button'
 import Breadcrumb from 'primevue/breadcrumb'
 import Tag from 'primevue/tag'
 import Skeleton from 'primevue/skeleton'
-import { fetchMission, saveMission, baseFields } from '@/shared/api/mission'
+import { generateUUID } from '@/shared/utils/uuid'
+import { fetchMission, saveMission, baseFields, cacheDetail } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import type { ProductMission, ProductMissionSavePayload } from '@/shared/types/mission'
+import type { ProductMission, ProductMissionSavePayload, ProductBolt } from '@/shared/types/mission'
+import MissionSidesSection from './components/MissionSidesSection.vue'
+
+interface FormSideState {
+  id?: number
+  name: string
+  clientRef: string
+  imageBase64?: string
+  thumbnailUrl?: string
+  bolts: (ProductBolt & { _partsBarcodes?: any[] })[]
+}
 
 const { t } = useI18n()
 const route = useRoute()
@@ -25,8 +36,9 @@ const id = route.params.id ? Number(route.params.id) : null
 const isEdit = id !== null
 const loading = ref(false)
 const saving = ref(false)
+const savingDraft = ref(false)
 
-const form = ref<ProductMission>({
+const form = ref<ProductMission & { _sides?: FormSideState[] }>({
   name: '',
   enabled: true,
   maxNgCount: null,
@@ -35,10 +47,12 @@ const form = ref<ProductMission>({
   skipScrew: false,
   isInspection: false,
   inspectionScope: 0,
+  _sides: [],
 })
 
 const prereqCard = ref<InstanceType<typeof MissionPrereqCard>>()
 const barcodeCard = ref<InstanceType<typeof MissionBarcodeCard>>()
+const sidesSection = ref<InstanceType<typeof MissionSidesSection>>()
 const basicForm = ref<InstanceType<typeof MissionBasicForm>>()
 
 const externalBarcodeRules = computed(() => barcodeCard.value?.localRules ?? [])
@@ -53,63 +67,138 @@ onMounted(async () => {
     loading.value = true
     try {
       const data = await fetchMission(id)
-      Object.assign(form.value, data)
+      // Collect bolt rule IDs — MissionBarcodeCard should hide these
+      const boltRuleIds = new Set<number>()
+      data.sides?.forEach((s: any) => s.bolts?.forEach((b: any) =>
+        b.partsBarcodes?.forEach((pb: any) => { if (pb.barCodeMatchingRuleId) boltRuleIds.add(pb.barCodeMatchingRuleId) })
+      ))
+      cacheDetail({ ...data, barcodeRules: (data.barcodeRules || []).filter((r: any) => !boltRuleIds.has(r.id)) })
+      const { sides: _apiSides, ...dataRest } = JSON.parse(JSON.stringify(data))
+      Object.assign(form.value, {
+        ...dataRest,
+        enabled: data.enabled === 1,
+        multiDeviceIndependent: data.multiDeviceIndependent === 1,
+        skipScrew: data.skipScrew === 1,
+        isInspection: data.isInspection === 1,
+      })
       snapshot = JSON.stringify(form.value)
+      // Populate sides from detail response (Base64 images + bolts)
+      if (_apiSides) {
+        const rulesById = new Map((data.barcodeRules || []).map((r: any) => [r.id, r]))
+        form.value._sides = _apiSides.map(s => ({
+          id: s.id,
+          name: s.name,
+          clientRef: s.clientRef || generateUUID(),
+          imageBase64: s.image || s.renderedImage,
+          bolts: s.bolts?.map((b: any) => ({
+            ...b, _localId: generateUUID(),
+            _partsBarcodes: (b.partsBarcodes || []).map((pb: any) => {
+              const rule = rulesById.get(pb.barCodeMatchingRuleId)
+              return {
+                id: pb.id,
+                barCodeMatchingRuleId: pb.barCodeMatchingRuleId,
+                barcodeRuleRef: pb.barcodeRuleRef,
+                name: rule?.name ?? '',
+                _ruleDef: rule ? { id: rule.id, name: rule.name, ruleType: rule.ruleType, expectedLength: rule.expectedLength, segments: rule.segments, clientRef: rule.clientRef } : null,
+              }
+            }),
+          })) ?? [],
+        }))
+      }
     } catch {
-      toast.add({ severity: 'error', detail: t('mission.edit.loadFailed'), life: 3000 })
+      toast.add({ severity: 'error', summary: '错误', detail: t('mission.edit.loadFailed'), life: 3000 })
       router.push({ path: '/mission' })
     } finally {
       loading.value = false
     }
   } else {
+    loading.value = false
     snapshot = JSON.stringify(form.value)
+  }
+
+  await nextTick()
+  if (isEdit && id) {
+    sidesSection.value?.loadFromMissionDetail()
+  } else if (!form.value._sides?.length) {
+    form.value._sides = [{ name: '面-1', clientRef: generateUUID(), bolts: [] }]
   }
 })
 
+const sidesTouched = ref(false)
+
+function markSidesTouched() { sidesTouched.value = true }
+
 function isDirty(): boolean {
-  return JSON.stringify(form.value) !== snapshot
+  if (sidesTouched.value) return true
+  const { _sides, sides, ...rest } = form.value as any
+  const { _sides: _snapSides, sides: _snapSides2, ...snapRest } = JSON.parse(snapshot) as any || {}
+  return JSON.stringify(rest) !== JSON.stringify(snapRest)
 }
 
-async function handleSave() {
+async function handleSave(draft = false) {
   const name = form.value.name.trim()
-  if (!name) {
-    toast.add({ severity: 'error', detail: t('mission.edit.nameRequired'), life: 3000 })
-    return
-  }
-  if (form.value.isInspection && form.value.inspectionScope === 0) {
-    toast.add({ severity: 'error', detail: t('mission.edit.scopeRequired'), life: 3000 })
-    return
-  }
+  if (!name) { toast.add({ severity: 'error', summary: '错误', detail: t('mission.edit.nameRequired'), life: 3000 }); return }
+  if (form.value.isInspection && form.value.inspectionScope === 0) { toast.add({ severity: 'error', summary: '错误', detail: t('mission.edit.scopeRequired'), life: 3000 }); return }
 
   const boundIds = basicForm.value?.getBoundMissionIds?.() ?? []
+  const sidesData = await sidesSection.value?.getSidesData() ?? []
+
+  // Collect bolt parts barcode rules and merge into barcodeRules
+  const missionBarcodeRules = barcodeCard.value?.getData() ?? []
+  const boltPartsRules = (sidesSection.value?.getPartsBarcodeRules() ?? []).map(r => ({ ...r, segments: r.segments || '' }))
+  const allBarcodeRules = [...missionBarcodeRules, ...boltPartsRules]
 
   const payload: ProductMissionSavePayload = {
     ...baseFields(form.value),
     inspectionBoundMissionIds: boundIds,
     prerequisites: prereqCard.value?.getData() ?? [],
-    barcodeRules: barcodeCard.value?.getData() ?? [],
+    barcodeRules: allBarcodeRules,
+    sides: sidesData,
   }
-  if (isEdit && id) {
-    payload.id = id
-  }
+  if (isEdit && id) payload.id = id
 
-  saving.value = true
+  if (draft) savingDraft.value = true
+  else saving.value = true
   try {
-    await saveMission(payload, isEdit)
+    const result = await saveMission(payload, isEdit)
+    // Backfill IDs: side/bolt/partsBarcode IDs from backend response
+    if (result.sides && form.value._sides) {
+      for (let i = 0; i < result.sides.length; i++) {
+        const rSide = result.sides[i]
+        const fSide = form.value._sides[i]
+        if (!fSide) continue
+        if (rSide.id) fSide.id = rSide.id
+        if (rSide.bolts && fSide.bolts) {
+          for (let j = 0; j < rSide.bolts.length; j++) {
+            const rBolt = rSide.bolts[j]
+            const fBolt = fSide.bolts[j]
+            if (!fBolt) continue
+            if (rBolt.id) fBolt.id = rBolt.id
+            // Backfill partsBarcode IDs
+            if (rBolt.partsBarcodes && (fBolt as any)._partsBarcodes) {
+              for (let k = 0; k < rBolt.partsBarcodes.length; k++) {
+                const rPb = rBolt.partsBarcodes[k]
+                const fPb = (fBolt as any)._partsBarcodes[k]
+                if (fPb && rPb.id) (fPb as any).id = rPb.id
+                if (fPb && rPb.barCodeMatchingRuleId) (fPb as any).barCodeMatchingRuleId = rPb.barCodeMatchingRuleId
+                if (fPb?._ruleDef && rPb.barCodeMatchingRuleId) (fPb as any)._ruleDef.id = rPb.barCodeMatchingRuleId
+              }
+            }
+          }
+        }
+      }
+    }
+    sidesTouched.value = false
     snapshot = JSON.stringify(form.value)
-    toast.add({ severity: 'success', detail: t('mission.edit.saveSuccess'), life: 2000 })
-    setTimeout(() => {
-      router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
-    }, 300)
+    if (draft) {
+      toast.add({ severity: 'success', summary: '成功', detail: t('mission.edit.draftSaved'), life: 2000 })
+    } else {
+      toast.add({ severity: 'success', summary: '成功', detail: t('mission.edit.saveSuccess'), life: 2000 })
+      setTimeout(() => router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } }), 300)
+    }
   } catch (e) {
-    toast.add({
-      severity: 'error',
-      detail: `${t('mission.edit.saveFailed')}: ${(e as Error).message}`,
-      life: 5000,
-    })
-  } finally {
-    saving.value = false
-  }
+    toast.add({ severity: 'error', summary: '错误', detail: `${t('mission.edit.saveFailed')}: ${(e as Error).message}`, life: 5000 })
+  } finally { saving.value = false; savingDraft.value = false }
 }
 
 async function handleBack() {
@@ -206,53 +295,65 @@ const breadcrumbItems = computed(() => [
         </div>
       </div>
 
-      <div v-else class="edit-layout">
-        <div class="edit-main">
-          <MissionBasicForm ref="basicForm" v-model="form" :is-edit="isEdit" />
-          <MissionBarcodeCard
-            ref="barcodeCard"
-            :mission-id="id"
-            :bound-material-code-ids="boundMaterialCodeIds"
-          />
-          <MissionPrereqCard
-            ref="prereqCard"
-            :mission-id="id"
-            :is-inspection="form.isInspection"
-            :external-rules="externalBarcodeRules"
-          />
+      <div v-else>
+        <div class="edit-layout">
+          <div class="edit-main">
+            <MissionBasicForm ref="basicForm" v-model="form" :is-edit="isEdit" />
+            <MissionBarcodeCard
+              ref="barcodeCard"
+              :mission-id="id"
+              :bound-material-code-ids="boundMaterialCodeIds"
+            />
+            <MissionPrereqCard
+              ref="prereqCard"
+              :mission-id="id"
+              :is-inspection="form.isInspection"
+              :external-rules="externalBarcodeRules"
+            />
+          </div>
+
+          <aside v-if="isEdit" class="edit-sidebar">
+            <Card class="meta-card">
+              <template #title>
+                <div class="meta-header">{{ t('mission.edit.meta') }}</div>
+              </template>
+              <template #content>
+                <dl v-if="metaItems.length > 0" class="side-meta">
+                  <template v-for="item in metaItems" :key="item.label">
+                    <dt>{{ item.label }}</dt>
+                    <dd>{{ item.value }}</dd>
+                  </template>
+                </dl>
+                <p v-else class="side-empty">{{ t('mission.edit.metaEmpty') }}</p>
+              </template>
+            </Card>
+          </aside>
         </div>
 
-        <aside v-if="isEdit" class="edit-sidebar">
-          <Card class="meta-card">
-            <template #title>
-              <div class="meta-header">{{ t('mission.edit.meta') }}</div>
-            </template>
-            <template #content>
-              <dl v-if="metaItems.length > 0" class="side-meta">
-                <template v-for="item in metaItems" :key="item.label">
-                  <dt>{{ item.label }}</dt>
-                  <dd>{{ item.value }}</dd>
-                </template>
-              </dl>
-              <p v-else class="side-empty">{{ t('mission.edit.metaEmpty') }}</p>
-            </template>
-          </Card>
-        </aside>
+        <MissionSidesSection ref="sidesSection" v-model:_sides="form._sides" :mission-id="id" :barcode-rules="externalBarcodeRules" :on-touch="markSidesTouched" />
       </div>
     </div>
 
     <div class="edit-actions">
       <Button
-        :label="String(t('mission.edit.cancel'))"
-        severity="secondary" text
-        :disabled="saving"
-        @click="handleBack"
+        :label="savingDraft ? String(t('mission.edit.draftSaving')) : String(t('mission.edit.draftSave'))"
+        severity="secondary" outlined
+        :disabled="saving || savingDraft"
+        @click="handleSave(true)"
       />
-      <Button
-        :label="saving ? String(t('mission.edit.saving')) : String(t('mission.edit.save'))"
-        :disabled="saving"
-        @click="handleSave"
-      />
+      <div class="edit-actions-right">
+        <Button
+          :label="String(t('mission.edit.cancel'))"
+          severity="secondary" text
+          :disabled="saving || savingDraft"
+          @click="handleBack"
+        />
+        <Button
+          :label="saving ? String(t('mission.edit.saving')) : String(t('mission.edit.save'))"
+          :disabled="saving || savingDraft"
+          @click="handleSave(false)"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -332,11 +433,18 @@ const breadcrumbItems = computed(() => [
 
 .edit-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: space-between;
   margin-top: 20px;
-  padding: 0 4px;
+  padding: 10px 16px;
   flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.edit-actions-right {
+  display: flex;
+  gap: 12px;
 }
 
 /* Skeleton loading */

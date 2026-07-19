@@ -383,6 +383,9 @@ onMounted(async () => {
   justify-content: space-between;
   padding: 8px 12px;
   border-radius: 8px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  margin-bottom: 6px;
 }
 
 .prereq-info {
