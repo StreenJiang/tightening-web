@@ -3,15 +3,17 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import MissionBasicForm from './components/MissionBasicForm.vue'
+import MissionPrereqCard from './components/MissionPrereqCard.vue'
+import MissionBarcodeCard from './components/MissionBarcodeCard.vue'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Breadcrumb from 'primevue/breadcrumb'
 import Tag from 'primevue/tag'
 import Skeleton from 'primevue/skeleton'
-import { fetchMission, createMission, updateMission } from '@/shared/api/mission'
+import { fetchMission, saveMission, baseFields } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import type { ProductMission } from '@/shared/types/mission'
+import type { ProductMission, ProductMissionSavePayload } from '@/shared/types/mission'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -34,6 +36,14 @@ const form = ref<ProductMission>({
   isInspection: false,
   inspectionScope: 0,
 })
+
+const prereqCard = ref<InstanceType<typeof MissionPrereqCard>>()
+const barcodeCard = ref<InstanceType<typeof MissionBarcodeCard>>()
+const basicForm = ref<InstanceType<typeof MissionBasicForm>>()
+
+const externalBarcodeRules = computed(() => barcodeCard.value?.localRules ?? [])
+
+const boundMaterialCodeIds = computed<number[]>(() => prereqCard.value?.getBoundBarcodeRuleIds?.() ?? [])
 
 let snapshot = ''
 let leavingConfirmed = false
@@ -70,13 +80,22 @@ async function handleSave() {
     toast.add({ severity: 'error', detail: t('mission.edit.scopeRequired'), life: 3000 })
     return
   }
+
+  const boundIds = basicForm.value?.getBoundMissionIds?.() ?? []
+
+  const payload: ProductMissionSavePayload = {
+    ...baseFields(form.value),
+    inspectionBoundMissionIds: boundIds,
+    prerequisites: prereqCard.value?.getData() ?? [],
+    barcodeRules: barcodeCard.value?.getData() ?? [],
+  }
+  if (isEdit && id) {
+    payload.id = id
+  }
+
   saving.value = true
   try {
-    if (isEdit && id) {
-      await updateMission(id, { ...form.value, name, id })
-    } else {
-      await createMission({ ...form.value, name })
-    }
+    await saveMission(payload, isEdit)
     snapshot = JSON.stringify(form.value)
     toast.add({ severity: 'success', detail: t('mission.edit.saveSuccess'), life: 2000 })
     setTimeout(() => {
@@ -189,7 +208,18 @@ const breadcrumbItems = computed(() => [
 
       <div v-else class="edit-layout">
         <div class="edit-main">
-          <MissionBasicForm v-model="form" :is-edit="isEdit" />
+          <MissionBasicForm ref="basicForm" v-model="form" :is-edit="isEdit" />
+          <MissionBarcodeCard
+            ref="barcodeCard"
+            :mission-id="id"
+            :bound-material-code-ids="boundMaterialCodeIds"
+          />
+          <MissionPrereqCard
+            ref="prereqCard"
+            :mission-id="id"
+            :is-inspection="form.isInspection"
+            :external-rules="externalBarcodeRules"
+          />
         </div>
 
         <aside v-if="isEdit" class="edit-sidebar">
@@ -286,8 +316,8 @@ const breadcrumbItems = computed(() => [
 }
 
 .meta-header {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .side-meta { margin: 0; }

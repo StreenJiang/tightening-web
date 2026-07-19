@@ -1,7 +1,8 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { fetchMissions, updateMission, deleteMission } from '@/shared/api/mission'
+import { fetchMissions, saveMission, deleteMission, baseFields } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import type { ProductMission } from '@/shared/types/mission'
 
 export const useMissionStore = defineStore('mission', () => {
@@ -10,6 +11,7 @@ export const useMissionStore = defineStore('mission', () => {
   const pagination = ref({ page: 1, size: 20, total: 0 })
   const searchName = ref('')
   const toast = useToast()
+  const { t } = useI18n()
 
   async function loadMissions(query?: { page?: number; name?: string }) {
     if (query) {
@@ -36,10 +38,16 @@ export const useMissionStore = defineStore('mission', () => {
     const previous = mission.enabled
     mission.enabled = !mission.enabled
     try {
-      await updateMission(mission.id!, { ...mission })
-    } catch {
+      const payload = {
+        id: mission.id,
+        ...baseFields(mission),
+        prerequisites: [],
+        barcodeRules: [],
+      }
+      await saveMission(payload, true)
+    } catch (e) {
       mission.enabled = previous
-      toast.add({ severity: 'error', detail: 'mission.list.toggleFailed', life: 3000 })
+      toast.add({ severity: 'error', detail: `${t('mission.list.toggleFailed')}: ${(e as Error).message}`, life: 3000 })
     }
   }
 

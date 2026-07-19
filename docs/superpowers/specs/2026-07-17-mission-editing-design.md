@@ -631,18 +631,101 @@ mission:
 | `src/router/index.ts` | 修改（mission 路由拆分） | Stage 1 |
 | `src/locales/zh-CN.json` | 追加 `mission.*` | Stage 1 |
 | `src/locales/en.json` | 追加 `mission.*` | Stage 1 |
-| `src/modules/mission/components/MissionPrereqTab.vue` | 新建 | Stage 2 |
-| `src/modules/mission/components/MissionInspectionTab.vue` | 新建 | Stage 2 |
-| `src/modules/mission/components/MissionBarcodeTab.vue` | 新建 | Stage 2 |
+| `src/modules/mission/components/MissionPrereqCard.vue` | 新建 | Stage 2 |
+| `src/modules/mission/components/MissionBarcodeCard.vue` | 新建 | Stage 2 |
 | `src/modules/mission/components/MissionSidesTab.vue` | 新建 | Stage 3 |
 
 ---
 
-## 8. 扩展预留
+## 8. Stage 2 — 实际实现
 
-Stage 2/3 集成方式：
-1. 在 `MissionEditPage.vue` 导航栏下方追加 Tab 栏组件
-2. 创建 `MissionXxxTab.vue` 组件，通过 `<component :is>` 或 `v-if` 切换
-3. 子资源 API 调用走 `src/shared/api/mission.ts` 已有 BASE 路径
-4. 表单字段扩展：在 `MissionBasicForm.vue` 的分组间插入新 section 或新增独立 Tab
-5. `ToggleSwitch.vue` 作为共享组件可在整个项目中复用
+**决策变更：原方案使用 Tab 页签，实际改为内联 Card 区段（方案 A）。**
+理由：子资源数据量小（前置任务 0-1，条码规则 0-6），Tab 会造成大量空白；Card 区段与现有表单风格一致，信息一览无余。
+
+### 8.1 整体布局
+
+编辑页在 `MissionBasicForm`（3 张 Card）下方追加 2 张新 Card，均使用 PrimeVue `Card` 组件：
+
+- **条码规则 Card**（`MissionBarcodeCard.vue`）— 在**前置任务 Card 上方**，因为物料码前置依赖条码规则
+- **前置任务 Card**（`MissionPrereqCard.vue`）— 三种前置类型：产品码前置、物料码前置（0-N 对）、点检链
+
+### 8.2 数据模型
+
+```typescript
+// 前置任务
+MissionPrerequisite { id, prerequisiteMissionId, prerequisiteType(1|2|3), barcodeRuleId }
+
+// 条码规则 — 新增字段
+BarCodeMatchingRule { ..., partNumber, seq, clientRef }
+
+// 统一保存 payload (multipart/form-data, dto JSON)
+ProductMissionSavePayload { ..., prerequisites[], barcodeRules[], inspectionBoundMissionIds[] }
+```
+
+### 8.3 后端接口变更
+
+- **保存**：`POST/PUT /api/missions`（`multipart/form-data`），`dto` 字段包含 `ProductMissionSaveDTO` JSON。子资源独立写端点（POST/DELETE prerequisites、barcode-rules 等）已删除。
+- **读取**：GET 端点保留（`/{id}/prerequisites`、`/{id}/barcode-rules`、`/{id}/inspection-bindings`）
+- **枚举**：`PrerequisiteType`（SAME_TRACE=1, MATERIAL_TRACE=2, INSPECTION_CHAIN=3）、`BarCodeRuleType`（PRODUCT_TRACE=1, MATERIAL_BARCODE=2）均有 `@JsonValue`/`@JsonCreator` 注解，序列化为整数
+- **新规则关联**：`BarCodeRuleSaveItem.clientRef`（前端 UUID）+ `PrerequisiteSaveItem.barcodeRuleRef`，后端通过 `clientRef` → 真实 ID 映射解析新增规则引用
+
+### 8.4 条码规则 Card（MissionBarcodeCard）
+
+- 产品追溯码最多 1 个，始终排在列表首位
+- 物料码 0-N 个，序号自动递增，删除后自动补齐
+- 物料码**依赖产品追溯码存在**（添加时无产品码则物料码选项 disabled）
+- `partNumber` 存储序号（物料码专用），保存时传 `seq` 字段
+- 段位配置：UI 1-based 含末尾，存时转换为 API 格式（0-based exclusive）JSON 字符串
+- 弹窗字段顺序：类型 → 名称 → 序号（只读）→ 期望总长度 → 段位配置
+- 弹窗打开自动 focus 名称输入框（`autofocus`）
+- 新规则生成 `clientRef`（`crypto.randomUUID()`）
+
+### 8.5 前置任务 Card（MissionPrereqCard）
+
+- 产品码前置/点检链：0-1 个，选择任务即可
+- 物料码前置：0-N 对（任务 + 物料码），物料码选项来自条码规则 Card（已保存 + 未保存）
+- 点检链在 `isInspection=false` 时 disabled（不隐藏）
+- 物料码下拉框选项为对象（`{ label: name, value: id }`），传 `barcodeRuleRef`（clientRef UUID）关联新规则
+- 弹窗字段顺序：类型 → 物料码（仅 type=2）→ 任务选择
+- 存量数据：加载时通过 `barcodeRuleId` 匹配条码规则名称
+
+### 8.6 巡检绑定简化
+
+- `ProductMission` 新增 `inspectionBoundMissionIds?: number[]`
+- `GET /{id}` 直接返回绑定 ID 列表，无需独立 API 调用
+- 点检配置弹窗改用 PrimeVue `MultiSelect`（自带搜索）
+
+### 8.7 保存流程
+
+1. `handleSave` 构建 `ProductMissionSavePayload`（`baseFields()` 共享函数转换 boolean → 0/1）
+2. `saveMission()` 将 payload 作为 FormData `dto` 字段发送
+3. 新增时会先创建条码规则拿到 ID，再通过 `barcodeRuleRef` 回填前置任务引用
+
+### 8.8 新增/修改文件
+
+| 文件 | 操作 |
+|------|------|
+| `src/shared/types/mission.ts` | 修改：追加 `MissionPrerequisite`、`BarCodeMatchingRule`、`Segment`、`ProductMissionSavePayload`；`ProductMission` 加 `inspectionBoundMissionIds` |
+| `src/shared/api/request.ts` | 修改：追加 `upload()` + 提取 `handleResponse()` 共享 |
+| `src/shared/api/mission.ts` | 修改：删除 `createMission`/`updateMission`/`toApi`，新增 `saveMission`/`baseFields`/`fetchPrerequisites`/`fetchBarcodeRules` |
+| `src/shared/api/mission.ts` | 删除：`fetchInspectionBindings`/`addInspectionBinding`/`deleteInspectionBinding` |
+| `src/modules/mission/components/MissionBarcodeCard.vue` | **新建** |
+| `src/modules/mission/components/MissionPrereqCard.vue` | **新建** |
+| `src/modules/mission/components/MissionBasicForm.vue` | 修改：巡检绑定改为 MultiSelect + 从 mission 数据读取 |
+| `src/modules/mission/MissionEditPage.vue` | 修改：集成子资源 Card + FormData 统一保存 |
+| `src/stores/mission.ts` | 修改：`toggleEnabled` 改用 `saveMission`/`baseFields` |
+| `src/locales/zh-CN.json` / `en.json` | 修改：追加 `prereq.*`、`barcode.*`、`delete.*` 键 |
+| `CONTEXT.md` | 修改：追加前置任务、条码规则、巡检绑定术语 |
+
+### 8.9 设计决策记录
+
+| 决策 | 选择 | 理由 |
+|------|------|------|
+| 子资源展示 | 内联 Card 区段（非 Tab） | 数据量小，无空白，与现有表单风格一致 |
+| 保存方式 | 统一 FormData（一次请求） | 后端已改为统一保存，前端不再串行调用 |
+| 新规则引用 | `clientRef` UUID | 保存前无真实 ID，UUID 提供稳定引用 |
+| 物料码序号 | 前端自动递增 | 用户可见展示用，保存时传 `seq` 字段 |
+| 段位 UI | 1-based 含末尾 | 用户直觉，存时转换 |
+| 卡片标题圆点 | 移除 | 简化视觉，加粗标题 |
+| 触摸屏适配 | 无 hover 交互 | 工控触摸屏场景 |
+| 点检弹窗 | MultiSelect | 自带搜索，代码更简洁 |

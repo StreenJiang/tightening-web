@@ -6,11 +6,11 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import RadioButton from 'primevue/radiobutton'
-import Checkbox from 'primevue/checkbox'
+import MultiSelect from 'primevue/multiselect'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
-import { checkName, fetchMissions, fetchInspectionBindings, addInspectionBinding, deleteInspectionBinding } from '@/shared/api/mission'
+import { checkName, fetchMissions } from '@/shared/api/mission'
 import type { ProductMission } from '@/shared/types/mission'
 
 const props = defineProps<{
@@ -51,36 +51,9 @@ async function openMissionPicker() {
   missionPickerVisible.value = true
 }
 
-async function onMissionPickerOk() {
-  const missionId = props.modelValue.id
-  const oldIds = boundMissionIds.value
-  const newIds = tempBoundMissionIds.value
-
-  // Persist to API when editing
-  if (missionId) {
-    const addOps = newIds
-      .filter((id) => !oldIds.includes(id))
-      .map((id) => addInspectionBinding(missionId, id))
-    const delOps: Promise<unknown>[] = []
-    for (const [boundMissionId, bindingId] of originalBindingMap.value) {
-      if (!newIds.includes(boundMissionId)) {
-        delOps.push(deleteInspectionBinding(missionId, bindingId))
-      }
-    }
-    await Promise.all([...addOps, ...delOps])
-    // Reload to get fresh binding IDs
-    try {
-      const bindings = await fetchInspectionBindings(missionId)
-      boundMissionIds.value = bindings.map((b) => b.boundMissionId)
-      originalBindingMap.value = new Map(bindings.map((b) => [b.boundMissionId, b.id!]))
-    } catch {
-      boundMissionIds.value = [...newIds]
-    }
-  } else {
-    // Creating new mission — store locally, will be saved after mission creation
-    boundMissionIds.value = [...newIds]
-  }
-
+function onMissionPickerOk() {
+  // 仅更新本地数组，不再调 API
+  boundMissionIds.value = [...tempBoundMissionIds.value]
   missionPickerVisible.value = false
 }
 
@@ -104,15 +77,6 @@ function isMissionPickerDirty(): boolean {
   const a = tempBoundMissionIds.value
   const b = boundMissionIds.value
   return a.length !== b.length || a.some((v) => !b.includes(v))
-}
-
-function toggleBindMissionInDialog(id: number) {
-  const idx = tempBoundMissionIds.value.indexOf(id)
-  if (idx === -1) {
-    tempBoundMissionIds.value.push(id)
-  } else {
-    tempBoundMissionIds.value.splice(idx, 1)
-  }
 }
 
 function update<K extends keyof ProductMission>(key: K, value: ProductMission[K]) {
@@ -150,17 +114,12 @@ function onNameBlur() {
 
 onUnmounted(() => clearTimeout(checkTimer))
 
-// Store original binding IDs for remove-on-save tracking
-const originalBindingMap = ref<Map<number, number>>(new Map()) // boundMissionId → bindingId
+defineExpose({ getBoundMissionIds: () => boundMissionIds.value })
 
-async function loadBoundMissions() {
-  if (!props.isEdit || !props.modelValue.id) return
-  try {
-    const bindings = await fetchInspectionBindings(props.modelValue.id)
-    boundMissionIds.value = bindings.map((b) => b.boundMissionId)
-    originalBindingMap.value = new Map(bindings.map((b) => [b.boundMissionId, b.id!]))
-  } catch {
-    /* ignore */
+function loadBoundMissions() {
+  // GET /{id} 已返回 inspectionBoundMissionIds，直接使用
+  if (props.modelValue.inspectionBoundMissionIds) {
+    boundMissionIds.value = [...props.modelValue.inspectionBoundMissionIds]
   }
 }
 
@@ -170,11 +129,11 @@ watch(() => props.modelValue.isInspection, (val) => {
     update('inspectionScope', 0)
     boundMissionIds.value = []
   }
-})
+  })
 
-// Load bound missions when editing with inspection already enabled
-watch(() => props.modelValue.id, (id) => {
-  if (id && props.modelValue.isInspection) {
+// 数据加载后自动填充
+watch(() => props.modelValue.inspectionBoundMissionIds, (ids) => {
+  if (ids && ids.length > 0) {
     loadBoundMissions()
   }
 }, { immediate: true })
@@ -186,7 +145,6 @@ watch(() => props.modelValue.id, (id) => {
     <Card class="form-card">
       <template #title>
         <div class="card-header">
-          <span class="card-dot card-dot--primary" />
           <span>{{ t('mission.edit.groups.basic') }}</span>
         </div>
       </template>
@@ -220,7 +178,6 @@ watch(() => props.modelValue.id, (id) => {
     <Card class="form-card">
       <template #title>
         <div class="card-header">
-          <span class="card-dot card-dot--purple" />
           <span>{{ t('mission.edit.groups.execution') }}</span>
         </div>
       </template>
@@ -264,7 +221,6 @@ watch(() => props.modelValue.id, (id) => {
     <Card class="form-card">
       <template #title>
         <div class="card-header">
-          <span class="card-dot card-dot--green" />
           <span>{{ t('mission.edit.groups.inspection') }}</span>
         </div>
       </template>
@@ -325,21 +281,16 @@ watch(() => props.modelValue.id, (id) => {
       :header="t('mission.edit.inspectionDialogTitle')"
       :style="{ width: '480px' }"
     >
-      <div v-if="availableMissions.length === 0" class="picker-empty">
-        暂无可用拧紧任务
-      </div>
-      <label
-        v-for="m in availableMissions"
-        :key="m.id"
-        class="picker-item"
-      >
-        <Checkbox
-          :model-value="tempBoundMissionIds.includes(m.id!)"
-          binary
-          @update:model-value="toggleBindMissionInDialog(m.id!)"
-        />
-        <span>{{ m.name }}</span>
-      </label>
+      <MultiSelect
+        v-model="tempBoundMissionIds"
+        :options="availableMissions"
+        option-label="name"
+        option-value="id"
+        :placeholder="String(t('mission.edit.fields.inspectionSelectMissions'))"
+        filter
+        fluid
+        display="chip"
+      />
 
       <template #footer>
         <Button
@@ -368,17 +319,8 @@ watch(() => props.modelValue.id, (id) => {
   display: flex;
   align-items: center;
   gap: 10px;
+  font-weight: 700;
 }
-
-.card-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.card-dot--primary { background: var(--p-primary-400); }
-.card-dot--purple  { background: var(--p-purple-400); }
-.card-dot--green   { background: var(--p-green-400); }
 
 .form-row {
   display: flex;
@@ -460,27 +402,8 @@ watch(() => props.modelValue.id, (id) => {
   cursor: pointer;
 }
 
-.picker-empty {
-  font-size: 13px;
-  color: var(--p-surface-500);
-  padding: 24px 0;
-  text-align: center;
-}
 
-.picker-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  font-size: 14px;
-  cursor: pointer;
-  border-radius: 4px;
-  padding: 0 4px;
-}
 .picker-item:hover {
   background: var(--p-surface-100);
-}
-html.dark .picker-item:hover {
-  background: rgba(255, 255, 255, 0.06);
 }
 </style>

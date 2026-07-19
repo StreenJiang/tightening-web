@@ -1,18 +1,15 @@
-import { get, post, put, del } from './request'
-import type { ProductMission, MissionQuery, InspectionMissionBinding } from '@/shared/types/mission'
+import { get, del, upload } from './request'
+import type {
+  ProductMission,
+  MissionQuery,
+  MissionPrerequisite,
+  BarCodeMatchingRule,
+  ProductMissionSavePayload,
+} from '@/shared/types/mission'
 
 const BASE = '/api/missions'
 
-function toApi(data: ProductMission): Record<string, unknown> {
-  return {
-    ...data,
-    enabled: data.enabled ? 1 : 0,
-    skipScrew: data.skipScrew ? 1 : 0,
-    multiDeviceIndependent: data.multiDeviceIndependent ? 1 : 0,
-    isInspection: data.isInspection ? 1 : 0,
-  }
-}
-
+/** API 响应 (0/1 整数) → 前端 boolean */
 function fromApi(raw: Record<string, unknown>): ProductMission {
   return {
     ...raw,
@@ -21,6 +18,21 @@ function fromApi(raw: Record<string, unknown>): ProductMission {
     multiDeviceIndependent: raw.multiDeviceIndependent === 1,
     isInspection: raw.isInspection === 1,
   } as ProductMission
+}
+
+/** ProductMission 基础字段 → SavePayload 整数格式 */
+export function baseFields(m: ProductMission): Pick<ProductMissionSavePayload, 'name' | 'maxNgCount' | 'passwordRequiredNgCount' | 'enabled' | 'multiDeviceIndependent' | 'skipScrew' | 'isInspection' | 'inspectionScope' | 'inspectionBoundMissionIds'> {
+  return {
+    name: m.name,
+    maxNgCount: m.maxNgCount,
+    passwordRequiredNgCount: m.passwordRequiredNgCount,
+    enabled: m.enabled ? 1 : 0,
+    multiDeviceIndependent: m.multiDeviceIndependent ? 1 : 0,
+    skipScrew: m.skipScrew ? 1 : 0,
+    isInspection: m.isInspection ? 1 : 0,
+    inspectionScope: m.inspectionScope,
+    inspectionBoundMissionIds: m.inspectionBoundMissionIds ?? [],
+  }
 }
 
 export async function fetchMissions(params: MissionQuery) {
@@ -44,28 +56,27 @@ export function checkName(name: string, excludeId?: number) {
   return get<boolean>(`${BASE}/check-name?${qs}`)
 }
 
-export function createMission(data: ProductMission) {
-  return post<string>(BASE, toApi(data))
-}
-
-export function updateMission(id: number, data: ProductMission) {
-  return put<string>(`${BASE}/${id}`, toApi(data))
-}
-
 export function deleteMission(id: number) {
   return del(`${BASE}/${id}`)
 }
 
-// ---- Inspection Mission Bindings ----
+// ---- 统一保存 (multipart/form-data) ----
 
-export async function fetchInspectionBindings(missionId: number) {
-  return get<InspectionMissionBinding[]>(`${BASE}/${missionId}/inspection-bindings`)
+export async function saveMission(payload: ProductMissionSavePayload, isUpdate: boolean): Promise<string> {
+  const fd = new FormData()
+  fd.append('dto', JSON.stringify(payload))
+  const path = isUpdate && payload.id ? `${BASE}/${payload.id}` : BASE
+  return upload<string>(isUpdate ? 'PUT' : 'POST', path, fd)
 }
 
-export function addInspectionBinding(missionId: number, boundMissionId: number) {
-  return post(`${BASE}/${missionId}/inspection-bindings`, { boundMissionId })
+// ---- 读取子资源 (GET 端点保留) ----
+
+export function fetchPrerequisites(missionId: number) {
+  return get<MissionPrerequisite[]>(`${BASE}/${missionId}/prerequisites`)
 }
 
-export function deleteInspectionBinding(missionId: number, bindingId: number) {
-  return del(`${BASE}/${missionId}/inspection-bindings/${bindingId}`)
+export function fetchBarcodeRules(missionId: number) {
+  return get<BarCodeMatchingRule[]>(`${BASE}/${missionId}/barcode-rules`)
 }
+
+// ---- 巡检绑定：GET /{id} 已返回 inspectionBoundMissionIds，无需独立 API ----

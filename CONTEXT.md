@@ -21,6 +21,14 @@
 | 工艺工程师 | Process Engineer | 定义拧紧策略和工艺参数 |
 | 管理员 | Admin | 系统配置、设备管理、用户管理 |
 
+## 任务子资源
+
+| 中文 | 英文 | 定义 |
+|------|------|------|
+| 前置任务 | Prerequisite | 任务启动前必须完成的前置依赖任务，按类型区分：同码追溯(SAME_TRACE)、物料码追溯(MATERIAL_TRACE)、巡检链(INSPECTION_CHAIN) |
+| 条码规则 | Barcode Rule | 产品追溯码(PRODUCT_TRACE)或物料码(MATERIAL_BARCODE)的匹配规则，按总长度及/或段位(segment)定义匹配条件 |
+| 巡检绑定 | Inspection Binding | 点检任务与普通拧紧任务之间的绑定关系，表示该拧紧任务的拧紧结果需要纳入点检范围 |
+
 ## 部署拓扑
 
 - **工控机（本地）：** N2840 主板 + 4GB DDR3 + 64GB SSD，运行收紧流程前端应用（浏览器打开 localhost）
