@@ -22,7 +22,6 @@ export interface MissionQuery {
 
 export interface MissionPrerequisite {
   id?: number
-  missionId?: number
   prerequisiteMissionId: number
   prerequisiteType: 1 | 2 | 3 // 1=SAME_TRACE 2=MATERIAL_TRACE 3=INSPECTION_CHAIN
   prerequisiteMissionName?: string // 展示用，非 API 字段
@@ -49,8 +48,8 @@ export interface BoltPartsBarcode {
 export interface ProductBolt {
   id?: number
   productSideId?: number
-  boltSerialNum: number
-  boltName?: string
+  serialNum: number
+  name?: string
   parameterSetId?: number
   torqueMin?: number | null
   torqueMax?: number | null
@@ -67,7 +66,6 @@ export interface ProductBolt {
 export interface BarCodeMatchingRule {
   id?: number
   name: string
-  productMissionId?: number
   ruleType: 1 | 2 // 1=PRODUCT_TRACE 2=MATERIAL_BARCODE
   partNumber?: string
   expectedLength?: number | null
@@ -157,7 +155,6 @@ export interface ProductMissionSavePayload {
 export interface ProductSideSaveItem {
   id?: number
   name: string
-  clientRef?: string
   bolts: ProductBoltSaveItem[]
   image?: string           // Base64, GET 时返回
   renderedImage?: string   // Base64, GET 时返回
@@ -166,8 +163,8 @@ export interface ProductSideSaveItem {
 
 export interface ProductBoltSaveItem {
   id?: number
-  boltSerialNum: number
-  boltName?: string
+  serialNum: number
+  name?: string
   parameterSetId?: number
   torqueMin?: number | null
   torqueMax?: number | null

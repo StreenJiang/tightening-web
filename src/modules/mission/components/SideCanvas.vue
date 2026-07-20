@@ -299,7 +299,7 @@ function onCanvasDblClick(e: MouseEvent) {
   if (!p) return
   const b = {
     _localId: generateUUID(),
-    boltSerialNum: nextBoltNum++,
+    serialNum: nextBoltNum++,
     locationXPercent: p.x,
     locationYPercent: p.y,
     parameterSetId: undefined,
@@ -313,7 +313,7 @@ function onCanvasDblClick(e: MouseEvent) {
   editingBoltIdx.value = bolts.value.length - 1
   renderCanvas()
   syncToParent()
-  boltDialog.value?.open(b, b.boltSerialNum, hasProductTrace.value)
+  boltDialog.value?.open(b, b.serialNum, hasProductTrace.value)
 }
 
 let dragIdx: number | null = null
@@ -345,7 +345,7 @@ function onBoltDragStart(e: MouseEvent, idx: number) {
 function onBoltClick(idx: number) {
   if (didDrag) return
   editingBoltIdx.value = idx
-  boltDialog.value?.open(bolts.value[idx], bolts.value[idx].boltSerialNum, hasProductTrace.value)
+  boltDialog.value?.open(bolts.value[idx], bolts.value[idx].serialNum, hasProductTrace.value)
 }
 
 function onBoltDialogSync(data: BoltDialogData) {
@@ -372,7 +372,7 @@ function onBoltDialogOk(data: BoltDialogData) {
 function onBoltDialogDelete() {
   if (editingBoltIdx.value === null) return
   bolts.value.splice(editingBoltIdx.value, 1)
-  bolts.value.forEach((b, i) => { b.boltSerialNum = i + 1 })
+  bolts.value.forEach((b, i) => { b.serialNum = i + 1 })
   nextBoltNum = bolts.value.length + 1
   editingBoltIdx.value = null
   renderCanvas()
@@ -383,30 +383,10 @@ const hasProductTrace = computed(() => props.barcodeRules.some(r => r.ruleType =
 
 // ── Export ──
 
+import { boltStateToSaveItem } from '@/shared/utils/mission'
+
 function getBoltData() {
-  return bolts.value.map(b => {
-    const pb = b._partsBarcode
-    return {
-      id: b.id,
-      boltSerialNum: b.boltSerialNum,
-      parameterSetId: b.parameterSetId,
-      torqueMin: b.torqueMin,
-      torqueMax: b.torqueMax,
-      angleMin: b.angleMin,
-      angleMax: b.angleMax,
-      armLocation: b.armLocation,
-      locationXPercent: b.locationXPercent,
-      locationYPercent: b.locationYPercent,
-      partsBarcode: pb ? {
-        ...(pb._ruleDef?.id == null ? { barcodeRuleRef: pb.barcodeRuleRef } : {}),
-        barcodeRule: pb._ruleDef ? (
-          pb._ruleDef.id != null
-            ? { id: pb._ruleDef.id, name: pb._ruleDef.name, ruleType: pb._ruleDef.ruleType, expectedLength: pb._ruleDef.expectedLength, segments: pb._ruleDef.segments }
-            : pb._ruleDef
-        ) : undefined,
-      } : undefined,
-    }
-  })
+  return bolts.value.map(boltStateToSaveItem)
 }
 
 async function loadSide(_sideId: number, imageBlob?: Blob) {
@@ -508,7 +488,7 @@ onBeforeUnmount(() => {
           :style="boltMarkerStyle(bolt)"
           @mousedown.prevent="onBoltDragStart($event, idx)"
           @click.stop="onBoltClick(idx)"
-        >{{ bolt.boltSerialNum }}</div>
+        >{{ bolt.serialNum }}</div>
       </div>
       <BoltPropertyDialog ref="boltDialog" @ok="onBoltDialogOk" @delete="onBoltDialogDelete" @sync="onBoltDialogSync" />
       <div v-if="bolts.length === 0" class="bolt-hint-overlay">{{ t('mission.edit.side.doubleClickHint') }}</div>

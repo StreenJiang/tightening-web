@@ -7,6 +7,7 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import SideCanvas from './SideCanvas.vue'
 import { generateUUID } from '@/shared/utils/uuid'
+import { boltStateToSaveItem } from '@/shared/utils/mission'
 import type { BarCodeMatchingRule, ProductSideSaveItem, BoltState, ProductBoltSaveItem } from '@/shared/types/mission'
 
 interface SideState {
@@ -168,21 +169,8 @@ function loadFromMissionDetail() {
 
 function getSidesData(): ProductSideSaveItem[] {
   return _sides.value.map(s => ({
-    id: s.id, name: s.name, clientRef: s.clientRef,
-    bolts: s.canvasRef?.getBoltData() ?? s.bolts.map(b => ({
-      id: b.id, boltSerialNum: b.boltSerialNum,
-      parameterSetId: b.parameterSetId, torqueMin: b.torqueMin, torqueMax: b.torqueMax,
-      angleMin: b.angleMin, angleMax: b.angleMax, armLocation: b.armLocation,
-      locationXPercent: b.locationXPercent, locationYPercent: b.locationYPercent,
-      partsBarcode: b._partsBarcode ? {
-        ...(b._partsBarcode._ruleDef?.id == null ? { barcodeRuleRef: b._partsBarcode.barcodeRuleRef } : {}),
-        barcodeRule: b._partsBarcode._ruleDef ? (
-          b._partsBarcode._ruleDef.id != null
-            ? { id: b._partsBarcode._ruleDef.id, name: b._partsBarcode._ruleDef.name, ruleType: b._partsBarcode._ruleDef.ruleType, expectedLength: b._partsBarcode._ruleDef.expectedLength, segments: b._partsBarcode._ruleDef.segments }
-            : b._partsBarcode._ruleDef
-        ) : undefined,
-      } : undefined,
-    })),
+    id: s.id, name: s.name,
+    bolts: s.canvasRef?.getBoltData() ?? s.bolts.map(boltStateToSaveItem),
     image: s.imageBase64,
     renderedImage: s.imageBase64,
     thumbnail: s.thumbnailBase64,
