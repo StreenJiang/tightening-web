@@ -30,7 +30,7 @@ export const useMissionStore = defineStore('mission', () => {
       pagination.value.size = data.size
       pagination.value.page = data.current
     } catch (e) {
-      toast.add({ severity: 'error', summary: '错误', detail: `加载任务列表失败: ${(e as Error).message}`, life: 5000 })
+      toast.add({ severity: 'error', summary: '错误', detail: `加载任务列表失败: ${e instanceof Error ? e.message : String(e)}`, life: 5000 })
     } finally {
       loading.value = false
     }
@@ -43,7 +43,7 @@ export const useMissionStore = defineStore('mission', () => {
       await setEnabled(mission.id!, mission.enabled)
     } catch (e) {
       mission.enabled = previous
-      toast.add({ severity: 'error', summary: '错误', detail: `${t('mission.list.toggleFailed')}: ${(e as Error).message}`, life: 3000 })
+      toast.add({ severity: 'error', summary: '错误', detail: `${t('mission.list.toggleFailed')}: ${e instanceof Error ? e.message : String(e)}`, life: 3000 })
     }
   }
 
@@ -53,7 +53,7 @@ export const useMissionStore = defineStore('mission', () => {
       await loadMissions()
       toast.add({ severity: 'success', summary: '成功', detail: t('mission.delete.success'), life: 3000 })
     } catch (e) {
-      toast.add({ severity: 'error', summary: '错误', detail: `删除失败: ${(e as Error).message}`, life: 5000 })
+      toast.add({ severity: 'error', summary: '错误', detail: `删除失败: ${e instanceof Error ? e.message : String(e)}`, life: 5000 })
     }
   }
 

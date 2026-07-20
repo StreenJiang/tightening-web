@@ -30,21 +30,37 @@ export function boltStateToSaveItem(b: BoltState): ProductBoltSaveItem {
 export function saveItemToBoltState(item: ProductBoltSaveItem, existingLocalId?: string): BoltState {
   const spb = item.partsBarcode
   const rule = spb?.barcodeRule
+  const _localId = existingLocalId ?? generateUUID()
+  const _partsBarcode = spb ? {
+    id: spb.id,
+    barcodeRuleRef: spb.barcodeRuleRef,
+    name: rule?.name ?? '',
+    _ruleDef: rule ? {
+      id: rule.id,
+      name: rule.name,
+      ruleType: rule.ruleType,
+      expectedLength: rule.expectedLength ?? null,
+      segments: rule.segments,
+      clientRef: rule.clientRef,
+    } : null,
+  } : undefined
+
   return {
-    ...item,
-    _localId: existingLocalId ?? generateUUID(),
-    _partsBarcode: spb ? {
-      id: spb.id,
-      barcodeRuleRef: spb.barcodeRuleRef,
-      name: rule?.name ?? '',
-      _ruleDef: rule ? {
-        id: rule.id,
-        name: rule.name,
-        ruleType: rule.ruleType,
-        expectedLength: rule.expectedLength ?? null,
-        segments: rule.segments,
-        clientRef: rule.clientRef,
-      } : null,
-    } : undefined,
-  } as BoltState
+    id: item.id,
+    serialNum: item.serialNum,
+    locationXPercent: item.locationXPercent,
+    locationYPercent: item.locationYPercent,
+    name: item.name,
+    parameterSetId: item.parameterSetId,
+    torqueMin: item.torqueMin,
+    torqueMax: item.torqueMax,
+    angleMin: item.angleMin,
+    angleMax: item.angleMax,
+    armLocation: item.armLocation,
+    enabled: item.enabled,
+    deviceBindings: item.deviceBindings,
+    partsBarcode: item.partsBarcode,
+    _localId,
+    _partsBarcode,
+  }
 }

@@ -42,6 +42,7 @@ export interface BoltDeviceBinding {
 export interface BoltPartsBarcode {
   id?: number
   barcodeRuleRef?: string
+  barCodeMatchingRuleId?: number // GET 响应中返回，用于关联已有条码规则
   barcodeRule?: BarCodeMatchingRule
 }
 
@@ -123,15 +124,16 @@ export interface Segment {
 export interface PrerequisiteSaveItem {
   id?: number
   prerequisiteMissionId: number
-  prerequisiteType: number
-  barcodeRuleId?: number       // 已有规则的真实 ID
+  prerequisiteType: 1 | 2 | 3
+  prerequisiteMissionName?: string // 展示用，GET 响应返回
+  barcodeRuleId?: number       // 物料前置关联的条码规则 ID
   barcodeRuleRef?: string      // 新规则的 clientRef UUID
 }
 
 export interface BarcodeRuleSaveItem {
   id?: number
   name: string
-  ruleType: number
+  ruleType: 1 | 2
   partNumber?: string
   expectedLength?: number | null
   segments: string // JSON string
@@ -166,6 +168,7 @@ export interface SideCanvasSyncData {
 export interface ProductSideSaveItem {
   id?: number
   name: string
+  clientRef?: string        // 前端生成的 UUID，GET/POST 均支持
   bolts: ProductBoltSaveItem[]
   image?: string           // Base64, GET 时返回
   renderedImage?: string   // Base64, GET 时返回
@@ -189,6 +192,7 @@ export interface ProductBoltSaveItem {
   partsBarcode?: {
     id?: number
     barcodeRuleRef?: string
+    barCodeMatchingRuleId?: number // GET 响应中返回
     barcodeRule?: BarCodeMatchingRule
   }
 }

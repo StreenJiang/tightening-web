@@ -12,7 +12,7 @@ import InputNumber from 'primevue/inputnumber'
 import Tag from 'primevue/tag'
 import { generateUUID } from '@/shared/utils/uuid'
 import { fetchBarcodeRules } from '@/shared/api/mission'
-import type { BarCodeMatchingRule, Segment } from '@/shared/types/mission'
+import type { BarCodeMatchingRule, BarcodeRuleSaveItem, Segment } from '@/shared/types/mission'
 
 const props = defineProps<{
   missionId: number | null
@@ -222,14 +222,7 @@ function onDeleteRule(rule: BarCodeMatchingRule) {
   }
 }
 
-function getData(): Array<{
-  id?: number
-  name: string
-  ruleType: number
-  partNumber?: string
-  expectedLength?: number | null
-  segments: string
-}> {
+function getData(): BarcodeRuleSaveItem[] {
   return rules.value.map(r => ({
     id: r.id != null && r.id > 0 ? r.id : undefined,
     name: r.name,

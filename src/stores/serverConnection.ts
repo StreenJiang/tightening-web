@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import * as v from 'valibot'
 
 export type ConnectionStatus = 'connected' | 'disconnected' | 'unconfigured' | 'loading'
 
@@ -9,6 +10,13 @@ export interface ServerStatusResponse {
   latency: number | null
   errorReason: string
 }
+
+const serverStatusResponseSchema = v.object({
+  status: v.picklist(['connected', 'disconnected', 'unconfigured']),
+  address: v.string(),
+  latency: v.nullable(v.number()),
+  errorReason: v.string(),
+})
 
 const API_BASE = ''
 const MOCK_DELAY = 3000 // ms — 模拟网络延迟，方便测试"连接中"状态
@@ -33,7 +41,7 @@ export const useServerConnectionStore = defineStore('serverConnection', () => {
       }
       const res = await fetch(`${API_BASE}/api/server/status`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data: ServerStatusResponse = await res.json()
+      const data = v.parse(serverStatusResponseSchema, await res.json())
       status.value = data.status
       address.value = data.address
       latency.value = data.latency

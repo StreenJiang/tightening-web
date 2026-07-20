@@ -294,18 +294,12 @@ function onCanvasDblClick(e: MouseEvent) {
   const rect = canvasRef.value!.getBoundingClientRect()
   const p = screenToPercent(e.clientX - rect.left, e.clientY - rect.top)
   if (!p) return
-  const b = {
+  const b: BoltState = {
     _localId: generateUUID(),
     serialNum: nextBoltNum++,
     locationXPercent: p.x,
     locationYPercent: p.y,
-    parameterSetId: undefined,
-    torqueMin: undefined,
-    torqueMax: undefined,
-    angleMin: undefined,
-    angleMax: undefined,
-    armLocation: undefined,
-  } as BoltState
+  }
   bolts.value.push(b)
   editingBoltIdx.value = bolts.value.length - 1
   renderCanvas()

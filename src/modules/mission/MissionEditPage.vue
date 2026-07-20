@@ -14,7 +14,7 @@ import { generateUUID } from '@/shared/utils/uuid'
 import { fetchMission, saveMission, baseFields, cacheDetail } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import type { ProductMission, ProductMissionSavePayload, BoltState } from '@/shared/types/mission'
+import type { ProductMission, ProductMissionSavePayload, ProductBoltSaveItem, ProductSideSaveItem, BarcodeRuleSaveItem, BoltState } from '@/shared/types/mission'
 import MissionSidesSection from './components/MissionSidesSection.vue'
 
 interface FormSideState {
@@ -69,11 +69,11 @@ onMounted(async () => {
       const data = await fetchMission(id)
       // Collect bolt rule IDs — MissionBarcodeCard should hide these
       const boltRuleIds = new Set<number>()
-      data.sides?.forEach((s: any) => s.bolts?.forEach((b: any) => {
+      data.sides?.forEach((s: ProductSideSaveItem) => s.bolts?.forEach((b: ProductBoltSaveItem) => {
         if (b.partsBarcode?.barcodeRule?.id) boltRuleIds.add(b.partsBarcode.barcodeRule.id)
       }))
-      cacheDetail({ ...data, barcodeRules: (data.barcodeRules || []).filter((r: any) => !boltRuleIds.has(r.id)) })
-      const { sides: _apiSides, ...dataRest } = JSON.parse(JSON.stringify(data))
+      cacheDetail({ ...data, barcodeRules: (data.barcodeRules || []).filter((r: BarcodeRuleSaveItem) => !boltRuleIds.has(r.id!)) })
+      const { sides: _apiSides, ...dataRest } = structuredClone(data)
       Object.assign(form.value, {
         ...dataRest,
         enabled: data.enabled === 1,
@@ -84,16 +84,16 @@ onMounted(async () => {
       snapshot = JSON.stringify(form.value)
       // Populate sides from detail response (Base64 images + bolts)
       if (_apiSides) {
-        const rulesById = new Map((data.barcodeRules || []).map((r: any) => [r.id, r]))
-        form.value._sides = (_apiSides as any[]).map((s: any) => ({
+        const rulesById = new Map((data.barcodeRules || []).map((r: BarcodeRuleSaveItem) => [r.id, r]))
+        form.value._sides = _apiSides.map((s: ProductSideSaveItem) => ({
           id: s.id,
           name: s.name,
           clientRef: s.clientRef || generateUUID(),
           imageBase64: s.image || s.renderedImage,
-          bolts: s.bolts?.map((b: any) => ({
+          bolts: (s.bolts || []).map((b: ProductBoltSaveItem) => ({
             ...b, _localId: generateUUID(),
             _partsBarcode: b.partsBarcode ? (() => {
-              const rule = b.partsBarcode.barcodeRule || rulesById.get(b.partsBarcode.barCodeMatchingRuleId)
+              const rule = b.partsBarcode.barcodeRule || rulesById.get(b.partsBarcode.barCodeMatchingRuleId!)
               return {
                 id: b.partsBarcode.id,
                 barcodeRuleRef: b.partsBarcode.barcodeRuleRef,
@@ -107,7 +107,7 @@ onMounted(async () => {
                   ...(rule.id == null && rule.clientRef ? { clientRef: rule.clientRef } : {}),
                 } : null,
               }
-            })() : null,
+            })() : undefined,
           })) ?? [],
         }))
       }
@@ -136,8 +136,9 @@ function markSidesTouched() { sidesTouched.value = true }
 
 function isDirty(): boolean {
   if (sidesTouched.value) return true
-  const { _sides, sides, ...rest } = form.value as any
-  const { _sides: _snapSides, sides: _snapSides2, ...snapRest } = JSON.parse(snapshot) as any || {}
+  const { _sides, ...rest } = form.value
+  const snap = JSON.parse(snapshot) as ProductMission & { _sides: FormSideState[] }
+  const { _sides: _snap, ...snapRest } = snap
   return JSON.stringify(rest) !== JSON.stringify(snapRest)
 }
 
@@ -174,7 +175,7 @@ async function handleSave(draft = false) {
   if (draft) savingDraft.value = true
   else saving.value = true
   try {
-    const result = await saveMission(payload, isEdit)
+    const result = await saveMission(payload)
     // Backfill IDs: side/bolt/partsBarcode IDs from backend response
     if (result.sides && form.value._sides) {
       for (let i = 0; i < result.sides.length; i++) {
@@ -213,7 +214,7 @@ async function handleSave(draft = false) {
       setTimeout(() => router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } }), 300)
     }
   } catch (e) {
-    toast.add({ severity: 'error', summary: '错误', detail: `${t('mission.edit.saveFailed')}: ${(e as Error).message}`, life: 5000 })
+    toast.add({ severity: 'error', summary: '错误', detail: `${t('mission.edit.saveFailed')}: ${e instanceof Error ? e.message : String(e)}`, life: 5000 })
   } finally { saving.value = false; savingDraft.value = false }
 }
 

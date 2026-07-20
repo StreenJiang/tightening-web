@@ -1,21 +1,59 @@
+import * as v from 'valibot'
 import { get, post, put, del } from './request'
 import type {
   ProductMission,
   MissionQuery,
   ProductMissionSavePayload,
+  PrerequisiteSaveItem,
+  BarcodeRuleSaveItem,
 } from '@/shared/types/mission'
 
 const BASE = '/api/missions'
 
-/** API 响应 (0/1 整数) → 前端 boolean */
-function fromApi(raw: Record<string, unknown>): ProductMission {
+// ── Valibot schemas for raw API responses (0/1 integers for boolean-like fields) ──
+
+const productMissionRawSchema = v.object({
+  id: v.nullish(v.number()),
+  name: v.string(),
+  maxNgCount: v.nullable(v.number()),
+  passwordRequiredNgCount: v.nullable(v.number()),
+  enabled: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  multiDeviceIndependent: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  skipScrew: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  isInspection: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  inspectionScope: v.nullish(v.number()),
+  inspectionBoundMissionIds: v.nullish(v.array(v.number())),
+  thumbnail: v.nullish(v.string()),
+  createTime: v.nullish(v.string()),
+  modifyTime: v.nullish(v.string()),
+})
+
+type ProductMissionRaw = v.InferOutput<typeof productMissionRawSchema>
+
+const missionListResponseSchema = v.object({
+  records: v.nullable(v.array(productMissionRawSchema)),
+  total: v.number(),
+  size: v.number(),
+  current: v.number(),
+})
+
+/** API 响应 (0/1 整数) → 前端 boolean，null 值转为 undefined，缺失值给兜底 */
+function fromApi(raw: ProductMissionRaw): ProductMission {
   return {
-    ...raw,
+    id: raw.id ?? undefined,
+    name: raw.name,
+    maxNgCount: raw.maxNgCount,
+    passwordRequiredNgCount: raw.passwordRequiredNgCount,
     enabled: raw.enabled === 1,
     skipScrew: raw.skipScrew === 1,
     multiDeviceIndependent: raw.multiDeviceIndependent === 1,
     isInspection: raw.isInspection === 1,
-  } as ProductMission
+    inspectionScope: raw.inspectionScope ?? 0,
+    inspectionBoundMissionIds: raw.inspectionBoundMissionIds ?? undefined,
+    thumbnail: raw.thumbnail ?? undefined,
+    createTime: raw.createTime ?? undefined,
+    modifyTime: raw.modifyTime ?? undefined,
+  }
 }
 
 /** ProductMission 基础字段 → SavePayload 整数格式 */
@@ -38,8 +76,9 @@ export async function fetchMissions(params: MissionQuery) {
   qs.set('page', String(params.page))
   qs.set('size', String(params.size))
   if (params.name) qs.set('name', params.name)
-  const data = await get<{ records: Record<string, unknown>[]; total: number; size: number; current: number }>(`${BASE}?${qs}`)
-  return { ...data, records: data.records.map(fromApi) }
+  const raw = await get<unknown>(`${BASE}?${qs}`)
+  const data = v.parse(missionListResponseSchema, raw)
+  return { ...data, records: (data.records ?? []).map(fromApi) }
 }
 
 /** GET /{id} — 后端现返回 ProductMissionDetailDTO（含 sides + Base64 图片） */
@@ -66,26 +105,26 @@ export function deleteMission(id: number) {
 
 export async function saveMission(
   payload: ProductMissionSavePayload,
-  isUpdate: boolean,
 ): Promise<ProductMissionSavePayload> {
-  const path = isUpdate && payload.id ? `${BASE}/${payload.id}` : BASE
+  const isUpdate = !!payload.id
+  const path = isUpdate ? `${BASE}/${payload.id}` : BASE
   return isUpdate ? put<ProductMissionSavePayload>(path, payload) : post<ProductMissionSavePayload>(BASE, payload)
 }
 
 // ---- 子资源（从缓存的 detail 返回，避免调用已删除的独立端点） ----
 
 export function cacheDetail(detail: ProductMissionSavePayload) {
-  (window as any).__missionDetail = detail
+  window.__missionDetail = detail
 }
 
 function getCachedDetail(): ProductMissionSavePayload | null {
-  return (window as any).__missionDetail ?? null
+  return window.__missionDetail ?? null
 }
 
-export function fetchPrerequisites(_missionId: number): Promise<any[]> {
+export function fetchPrerequisites(_missionId: number): Promise<PrerequisiteSaveItem[]> {
   return Promise.resolve(getCachedDetail()?.prerequisites ?? [])
 }
 
-export function fetchBarcodeRules(_missionId: number): Promise<any[]> {
+export function fetchBarcodeRules(_missionId: number): Promise<BarcodeRuleSaveItem[]> {
   return Promise.resolve(getCachedDetail()?.barcodeRules ?? [])
 }
