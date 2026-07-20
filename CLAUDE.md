@@ -51,6 +51,14 @@ src/
 └── locales/             # i18n 语言文件（zh-CN.json / en.json）
 ```
 
+## TypeScript 规范
+
+- **禁止使用 `any` 类型**。所有变量、参数、返回值必须有明确类型。`any` 会导致类型检查失效，数据丢失 bug 难以发现。
+  - API 边界（`JSON.parse` 返回值）无法避免时，用 `unknown` 并做类型守卫。
+  - 模板 `ref` 回调参数可用 `unknown` + `as` 断言。
+  - UI 层内部状态（如 `_partsBarcode`）必须定义专用 interface，不允许用 `any` 或内联交叉类型。
+- 接口定义统一放在 `src/shared/types/` 目录下。
+
 ## 当前状态
 
 项目已完成基础脚手架搭建，包含路由、状态管理、i18n、PrimeVue v4 styled 模式主题。任务管理（Mission）模块已实现列表页和编辑页，包括搜索、分页、增删改查等完整功能。

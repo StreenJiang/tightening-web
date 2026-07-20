@@ -14,7 +14,7 @@ import { generateUUID } from '@/shared/utils/uuid'
 import { fetchMission, saveMission, baseFields, cacheDetail } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import type { ProductMission, ProductMissionSavePayload, ProductBolt } from '@/shared/types/mission'
+import type { ProductMission, ProductMissionSavePayload, BoltState } from '@/shared/types/mission'
 import MissionSidesSection from './components/MissionSidesSection.vue'
 
 interface FormSideState {
@@ -23,7 +23,7 @@ interface FormSideState {
   clientRef: string
   imageBase64?: string
   thumbnailUrl?: string
-  bolts: (ProductBolt & { _partsBarcodes?: any[] })[]
+  bolts: BoltState[]
 }
 
 const { t } = useI18n()
@@ -38,7 +38,7 @@ const loading = ref(false)
 const saving = ref(false)
 const savingDraft = ref(false)
 
-const form = ref<ProductMission & { _sides?: FormSideState[] }>({
+const form = ref<ProductMission & { _sides: FormSideState[] }>({
   name: '',
   enabled: true,
   maxNgCount: null,
@@ -69,9 +69,9 @@ onMounted(async () => {
       const data = await fetchMission(id)
       // Collect bolt rule IDs — MissionBarcodeCard should hide these
       const boltRuleIds = new Set<number>()
-      data.sides?.forEach((s: any) => s.bolts?.forEach((b: any) =>
-        b.partsBarcodes?.forEach((pb: any) => { if (pb.barCodeMatchingRuleId) boltRuleIds.add(pb.barCodeMatchingRuleId) })
-      ))
+      data.sides?.forEach((s: any) => s.bolts?.forEach((b: any) => {
+        if (b.partsBarcode?.barcodeRule?.id) boltRuleIds.add(b.partsBarcode.barcodeRule.id)
+      }))
       cacheDetail({ ...data, barcodeRules: (data.barcodeRules || []).filter((r: any) => !boltRuleIds.has(r.id)) })
       const { sides: _apiSides, ...dataRest } = JSON.parse(JSON.stringify(data))
       Object.assign(form.value, {
@@ -85,23 +85,29 @@ onMounted(async () => {
       // Populate sides from detail response (Base64 images + bolts)
       if (_apiSides) {
         const rulesById = new Map((data.barcodeRules || []).map((r: any) => [r.id, r]))
-        form.value._sides = _apiSides.map(s => ({
+        form.value._sides = (_apiSides as any[]).map((s: any) => ({
           id: s.id,
           name: s.name,
           clientRef: s.clientRef || generateUUID(),
           imageBase64: s.image || s.renderedImage,
           bolts: s.bolts?.map((b: any) => ({
             ...b, _localId: generateUUID(),
-            _partsBarcodes: (b.partsBarcodes || []).map((pb: any) => {
-              const rule = rulesById.get(pb.barCodeMatchingRuleId)
+            _partsBarcode: b.partsBarcode ? (() => {
+              const rule = b.partsBarcode.barcodeRule || rulesById.get(b.partsBarcode.barCodeMatchingRuleId)
               return {
-                id: pb.id,
-                barCodeMatchingRuleId: pb.barCodeMatchingRuleId,
-                barcodeRuleRef: pb.barcodeRuleRef,
+                id: b.partsBarcode.id,
+                barcodeRuleRef: b.partsBarcode.barcodeRuleRef,
                 name: rule?.name ?? '',
-                _ruleDef: rule ? { id: rule.id, name: rule.name, ruleType: rule.ruleType, expectedLength: rule.expectedLength, segments: rule.segments, clientRef: rule.clientRef } : null,
+                _ruleDef: rule ? {
+                  id: rule.id,
+                  name: rule.name,
+                  ruleType: rule.ruleType,
+                  expectedLength: rule.expectedLength,
+                  segments: rule.segments,
+                  ...(rule.id == null && rule.clientRef ? { clientRef: rule.clientRef } : {}),
+                } : null,
               }
-            }),
+            })() : null,
           })) ?? [],
         }))
       }
@@ -144,9 +150,11 @@ async function handleSave(draft = false) {
   const sidesData = await sidesSection.value?.getSidesData() ?? []
 
   // Collect bolt parts barcode rules and merge into barcodeRules
+  // NOTE: Bolt parts barcode rules are now INLINE in each bolt's partsBarcode.barcodeRule,
+  // so they should NOT also appear in the top-level barcodeRules array.
+  // Only mission-level rules (from BarcodeCard) go here.
   const missionBarcodeRules = barcodeCard.value?.getData() ?? []
-  const boltPartsRules = (sidesSection.value?.getPartsBarcodeRules() ?? []).map(r => ({ ...r, segments: r.segments || '' }))
-  const allBarcodeRules = [...missionBarcodeRules, ...boltPartsRules]
+  const allBarcodeRules = missionBarcodeRules
 
   const payload: ProductMissionSavePayload = {
     ...baseFields(form.value),
@@ -156,6 +164,12 @@ async function handleSave(draft = false) {
     sides: sidesData,
   }
   if (isEdit && id) payload.id = id
+
+  console.log('=== SAVE PAYLOAD ===', JSON.stringify(payload, (key, val) =>
+    key === 'image' || key === 'renderedImage' || key === 'thumbnail'
+      ? (typeof val === 'string' && val.length > 100 ? `[BASE64:${val.length}chars]` : val)
+      : val
+  , 2))
 
   if (draft) savingDraft.value = true
   else saving.value = true
@@ -174,14 +188,16 @@ async function handleSave(draft = false) {
             const fBolt = fSide.bolts[j]
             if (!fBolt) continue
             if (rBolt.id) fBolt.id = rBolt.id
-            // Backfill partsBarcode IDs
-            if (rBolt.partsBarcodes && (fBolt as any)._partsBarcodes) {
-              for (let k = 0; k < rBolt.partsBarcodes.length; k++) {
-                const rPb = rBolt.partsBarcodes[k]
-                const fPb = (fBolt as any)._partsBarcodes[k]
-                if (fPb && rPb.id) (fPb as any).id = rPb.id
-                if (fPb && rPb.barCodeMatchingRuleId) (fPb as any).barCodeMatchingRuleId = rPb.barCodeMatchingRuleId
-                if (fPb?._ruleDef && rPb.barCodeMatchingRuleId) (fPb as any)._ruleDef.id = rPb.barCodeMatchingRuleId
+            // Backfill partsBarcode ID (single object, not array)
+            const fPb = (fBolt as BoltState)._partsBarcode
+            if (rBolt.partsBarcode && fPb) {
+              const rPb = rBolt.partsBarcode
+              if (rPb.id) fPb.id = rPb.id
+              if (rPb.barcodeRule?.id && fPb._ruleDef) {
+                fPb._ruleDef.id = rPb.barcodeRule.id
+                // 已有 DB id 后清空 ref，防止后续保存时 id+ref 冲突
+                delete fPb._ruleDef.clientRef
+                delete fPb.barcodeRuleRef
               }
             }
           }

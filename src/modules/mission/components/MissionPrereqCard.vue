@@ -207,9 +207,10 @@ function getData(): Array<{
   id?: number
   prerequisiteMissionId: number
   prerequisiteType: number
-  materialCode?: string
+  barcodeRuleId?: number
+  barcodeRuleRef?: string
 }> {
-  const result: Array<any> = []
+  const result: Array<Record<string, unknown>> = []
   if (prereq.value) {
     result.push({
       prerequisiteMissionId: prereq.value.prerequisiteMissionId,
@@ -222,7 +223,7 @@ function getData(): Array<{
       prerequisiteMissionId: mp.prerequisiteMissionId,
       prerequisiteType: 2,
       barcodeRuleId: mp.barcodeRuleId > 0 ? mp.barcodeRuleId : undefined,
-      barcodeRuleRef: rule?.clientRef,
+      ...(mp.barcodeRuleId > 0 ? {} : { barcodeRuleRef: rule?.clientRef }),
     })
   }
   return result

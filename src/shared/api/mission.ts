@@ -54,6 +54,10 @@ export function checkName(name: string, excludeId?: number) {
   return get<boolean>(`${BASE}/check-name?${qs}`)
 }
 
+export function setEnabled(id: number, enabled: boolean) {
+  return put(`${BASE}/${id}/enabled`, { code: enabled ? 1 : 0 })
+}
+
 export function deleteMission(id: number) {
   return del(`${BASE}/${id}`)
 }

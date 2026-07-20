@@ -27,14 +27,30 @@ export interface MissionPrerequisite {
   prerequisiteType: 1 | 2 | 3 // 1=SAME_TRACE 2=MATERIAL_TRACE 3=INSPECTION_CHAIN
   prerequisiteMissionName?: string // 展示用，非 API 字段
   barcodeRuleId?: number   // 物料前置关联的条码规则 ID
+  barcodeRuleRef?: string  // 新规则的 clientRef UUID
 }
 
 // ===== 产品面 & 螺栓 (Stage 3) =====
+
+export interface BoltDeviceBinding {
+  id?: number
+  deviceId?: number
+  deviceRole?: number
+  deviceSpec?: number
+  sortOrder?: number
+}
+
+export interface BoltPartsBarcode {
+  id?: number
+  barcodeRuleRef?: string
+  barcodeRule?: BarCodeMatchingRule
+}
 
 export interface ProductBolt {
   id?: number
   productSideId?: number
   boltSerialNum: number
+  boltName?: string
   parameterSetId?: number
   torqueMin?: number | null
   torqueMax?: number | null
@@ -43,6 +59,9 @@ export interface ProductBolt {
   armLocation?: string
   locationXPercent: number
   locationYPercent: number
+  enabled?: number
+  deviceBindings?: BoltDeviceBinding[]
+  partsBarcode?: BoltPartsBarcode
 }
 
 export interface BarCodeMatchingRule {
@@ -53,7 +72,45 @@ export interface BarCodeMatchingRule {
   partNumber?: string
   expectedLength?: number | null
   segments: string // JSON string，e.g. '[{"s":0,"e":3,"v":"ABC"}]'
+  seq?: number       // 物料码序号
   clientRef?: string // 前端生成的 UUID，用于新增时前后关联
+}
+
+// ===== UI 层内部状态类型 =====
+
+/** UI 层条码规则状态 — API 字段 + UI 专属字段 */
+export interface BarcodeRuleState {
+  id?: number
+  name: string
+  ruleType: 1 | 2
+  expectedLength?: number | null
+  segments: string
+  clientRef?: string
+}
+
+/** UI 层螺栓物料条码状态 */
+export interface PartsBarcodeState {
+  id?: number
+  barcodeRuleRef?: string
+  name: string
+  _ruleDef: BarcodeRuleState | null
+}
+
+/** UI 层螺栓状态 = API 类型 + 内部字段 */
+export type BoltState = ProductBolt & {
+  _localId: string
+  _partsBarcode?: PartsBarcodeState
+}
+
+/** BoltPropertyDialog 数据 */
+export interface BoltDialogData {
+  parameterSetId: number | null
+  armLocation: string
+  torqueMin: number | null
+  torqueMax: number | null
+  angleMin: number | null
+  angleMax: number | null
+  partsBarcode: PartsBarcodeState | null
 }
 
 /** UI 层 segment：1-based 含末尾 */
@@ -110,6 +167,7 @@ export interface ProductSideSaveItem {
 export interface ProductBoltSaveItem {
   id?: number
   boltSerialNum: number
+  boltName?: string
   parameterSetId?: number
   torqueMin?: number | null
   torqueMax?: number | null
@@ -118,9 +176,11 @@ export interface ProductBoltSaveItem {
   armLocation?: string
   locationXPercent: number
   locationYPercent: number
-  partsBarcodes?: Array<{
+  enabled?: number
+  deviceBindings?: BoltDeviceBinding[]
+  partsBarcode?: {
     id?: number
-    barCodeMatchingRuleId?: number
-    barcodeRuleRef?: string   // 新规则的 clientRef UUID
-  }>
+    barcodeRuleRef?: string
+    barcodeRule?: BarCodeMatchingRule
+  }
 }

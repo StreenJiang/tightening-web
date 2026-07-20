@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { fetchMissions, saveMission, deleteMission, baseFields } from '@/shared/api/mission'
+import { fetchMissions, deleteMission, setEnabled } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from 'vue-i18n'
 import type { ProductMission } from '@/shared/types/mission'
@@ -40,14 +40,7 @@ export const useMissionStore = defineStore('mission', () => {
     const previous = mission.enabled
     mission.enabled = !mission.enabled
     try {
-      const payload = {
-        id: mission.id,
-        ...baseFields(mission),
-        prerequisites: [],
-        barcodeRules: [],
-        sides: [],
-      }
-      await saveMission(payload, true)
+      await setEnabled(mission.id!, mission.enabled)
     } catch (e) {
       mission.enabled = previous
       toast.add({ severity: 'error', summary: '错误', detail: `${t('mission.list.toggleFailed')}: ${(e as Error).message}`, life: 3000 })

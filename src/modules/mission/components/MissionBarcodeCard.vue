@@ -238,7 +238,7 @@ function getData(): Array<{
     expectedLength: r.expectedLength,
     segments: r.segments,
     seq: r.ruleType === 2 ? parseInt(r.partNumber ?? '0', 10) || undefined : undefined,
-    clientRef: r.clientRef,
+    ...(r.id != null && r.id > 0 ? {} : { clientRef: r.clientRef }),
   }))
 }
 

@@ -7,7 +7,7 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import SideCanvas from './SideCanvas.vue'
 import { generateUUID } from '@/shared/utils/uuid'
-import type { BarCodeMatchingRule, ProductSideSaveItem, ProductBolt } from '@/shared/types/mission'
+import type { BarCodeMatchingRule, ProductSideSaveItem, BoltState, ProductBoltSaveItem } from '@/shared/types/mission'
 
 interface SideState {
   id?: number
@@ -16,7 +16,7 @@ interface SideState {
   imageBase64?: string
   thumbnailUrl?: string
   thumbnailBase64?: string
-  bolts: (ProductBolt & { _localId: string; _partsBarcodes?: any[] })[]
+  bolts: BoltState[]
   canvasRef?: InstanceType<typeof SideCanvas>
 }
 
@@ -64,10 +64,10 @@ function closeDialog() {
   editingIndex.value = null
 }
 
-async function onSideSync(clientRef: string, data: { imageBlob: Blob | null; bolts: any[] }) {
+async function onSideSync(clientRef: string, data: { imageBlob: Blob | null; bolts: ProductBoltSaveItem[] }) {
   const idx = _sides.value.findIndex(s => s.clientRef === clientRef)
   if (idx === -1) return
-  _sides.value[idx].bolts = data.bolts as any
+  _sides.value[idx].bolts = data.bolts as unknown as BoltState[]
   props.onTouch?.()
   if (data.imageBlob) {
     const b64 = await blobToBase64(data.imageBlob)
@@ -174,10 +174,14 @@ function getSidesData(): ProductSideSaveItem[] {
       parameterSetId: b.parameterSetId, torqueMin: b.torqueMin, torqueMax: b.torqueMax,
       angleMin: b.angleMin, angleMax: b.angleMax, armLocation: b.armLocation,
       locationXPercent: b.locationXPercent, locationYPercent: b.locationYPercent,
-      partsBarcodes: ((b as any)._partsBarcodes ?? []).map((pb: any) => ({
-        id: pb.id, barCodeMatchingRuleId: pb.barCodeMatchingRuleId,
-        barcodeRuleRef: pb.barcodeRuleRef,
-      })),
+      partsBarcode: b._partsBarcode ? {
+        ...(b._partsBarcode._ruleDef?.id == null ? { barcodeRuleRef: b._partsBarcode.barcodeRuleRef } : {}),
+        barcodeRule: b._partsBarcode._ruleDef ? (
+          b._partsBarcode._ruleDef.id != null
+            ? { id: b._partsBarcode._ruleDef.id, name: b._partsBarcode._ruleDef.name, ruleType: b._partsBarcode._ruleDef.ruleType, expectedLength: b._partsBarcode._ruleDef.expectedLength, segments: b._partsBarcode._ruleDef.segments }
+            : b._partsBarcode._ruleDef
+        ) : undefined,
+      } : undefined,
     })),
     image: s.imageBase64,
     renderedImage: s.imageBase64,
@@ -185,15 +189,11 @@ function getSidesData(): ProductSideSaveItem[] {
   }))
 }
 
-function getPartsBarcodeRules(): Array<{ name: string; ruleType: number; expectedLength?: number | null; segments?: string; clientRef: string }> {
-  return _sides.value.flatMap(s => s.canvasRef?.getPartsBarcodeRules() ?? [])
-}
-
 function getCanvasRefSetter(idx: number) {
-  return (el: any) => { if (el) _sides.value[idx].canvasRef = el }
+  return (el: unknown) => { if (el) _sides.value[idx].canvasRef = el as InstanceType<typeof SideCanvas> }
 }
 
-defineExpose({ getSidesData, getPartsBarcodeRules, loadFromMissionDetail })
+defineExpose({ getSidesData, loadFromMissionDetail })
 </script>
 
 <template>
@@ -226,7 +226,7 @@ defineExpose({ getSidesData, getPartsBarcodeRules, loadFromMissionDetail })
     @update:visible="onDialogVisibleChange" @show="onDialogOpened">
     <SideCanvas v-for="(s, i) in _sides" :key="s.clientRef" :ref="getCanvasRefSetter(i)"
       v-show="editingIndex === i" :side-id="s.id ?? null" :client-ref="s.clientRef"
-      :barcode-rules="barcodeRules" :on-sync="(d: any) => onSideSync(s.clientRef, d)" />
+      :barcode-rules="barcodeRules" :on-sync="(d: { imageBlob: Blob | null; bolts: ProductBoltSaveItem[] }) => onSideSync(s.clientRef, d)" />
   </Dialog>
 </template>
 

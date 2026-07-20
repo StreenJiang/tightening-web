@@ -7,15 +7,15 @@ import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import { generateUUID } from '@/shared/utils/uuid'
-import type { ProductBolt } from '@/shared/types/mission'
+import type { ProductBolt, PartsBarcodeState, BoltDialogData } from '@/shared/types/mission'
 
 const { t } = useI18n()
 const toast = useToast()
 
 const emit = defineEmits<{
-  (e: 'ok', data: any): void
+  (e: 'ok', data: BoltDialogData): void
   (e: 'delete'): void
-  (e: 'sync', data: any): void
+  (e: 'sync', data: BoltDialogData): void
 }>()
 
 const visible = ref(false)
@@ -28,7 +28,7 @@ const torqueMin = ref<number | null>(null)
 const torqueMax = ref<number | null>(null)
 const angleMin = ref<number | null>(null)
 const angleMax = ref<number | null>(null)
-const partBarcode = ref<any>(null)  // single barcode, not array
+const partBarcode = ref<PartsBarcodeState | null>(null)
 
 // mini-dialog
 const matVisible = ref(false)
@@ -36,7 +36,7 @@ const matName = ref('')
 const matExpectedLength = ref<number | null>(null)
 const segments = ref<Array<{ s: number; e: number; v: string }>>([])
 
-function open(bolt: ProductBolt & { _partsBarcodes?: any[] }, num: number, hasProd: boolean) {
+function open(bolt: ProductBolt & { _partsBarcode?: PartsBarcodeState }, num: number, hasProd: boolean) {
   serialNum.value = num
   hasProductTrace.value = hasProd
   pset.value = bolt.parameterSetId ?? null
@@ -45,7 +45,7 @@ function open(bolt: ProductBolt & { _partsBarcodes?: any[] }, num: number, hasPr
   torqueMax.value = bolt.torqueMax ?? null
   angleMin.value = bolt.angleMin ?? null
   angleMax.value = bolt.angleMax ?? null
-  partBarcode.value = bolt._partsBarcodes?.[0] ?? null
+  partBarcode.value = bolt._partsBarcode ?? null
   visible.value = true
 }
 
@@ -104,7 +104,8 @@ function onMatOk() {
     }
   }
 
-  const uuid = partBarcode.value?.barcodeRuleRef ?? generateUUID()
+  const existing = partBarcode.value
+  const uuid = existing?.barcodeRuleRef ?? generateUUID()
   const apiSegs = segments.value
     .filter(s => s.e > 0 && s.v)
     .map(s => ({ s: s.s - 1, e: s.e, v: s.v }))
@@ -113,11 +114,12 @@ function onMatOk() {
     barcodeRuleRef: uuid,
     name: matName.value.trim(),
     _ruleDef: {
+      ...(existing?._ruleDef?.id != null ? { id: existing._ruleDef.id } : {}),
       name: matName.value.trim(),
       ruleType: 2,
       expectedLength: matExpectedLength.value,
       segments: apiSegs.length > 0 ? JSON.stringify(apiSegs) : '',
-      clientRef: uuid,
+      ...(existing?._ruleDef?.id != null ? {} : { clientRef: uuid }),
     },
   }
   matVisible.value = false
@@ -130,7 +132,7 @@ function removeBarcode() {
   emit('sync', buildOkData())
 }
 
-function buildOkData(): any {
+function buildOkData(): BoltDialogData {
   return {
     parameterSetId: pset.value,
     armLocation: armLocation.value,
@@ -138,7 +140,7 @@ function buildOkData(): any {
     torqueMax: torqueMax.value,
     angleMin: angleMin.value,
     angleMax: angleMax.value,
-    partsBarcodes: partBarcode.value ? [partBarcode.value] : [],
+    partsBarcode: partBarcode.value ?? null,
   }
 }
 

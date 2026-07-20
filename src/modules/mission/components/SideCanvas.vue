@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
-import type { ProductBolt, BarCodeMatchingRule } from '@/shared/types/mission'
+import type { ProductBolt, BarCodeMatchingRule, BoltState, ProductBoltSaveItem, BoltDialogData } from '@/shared/types/mission'
 import { generateUUID } from '@/shared/utils/uuid'
 import BoltPropertyDialog from './BoltPropertyDialog.vue'
 
@@ -12,7 +12,7 @@ const props = defineProps<{
   sideId: number | null
   clientRef: string
   barcodeRules: BarCodeMatchingRule[]
-  onSync?: (data: { imageBlob: Blob | null; bolts: any[] }) => void
+  onSync?: (data: { imageBlob: Blob | null; bolts: ProductBoltSaveItem[] }) => void
 }>()
 
 const { t } = useI18n()
@@ -41,7 +41,7 @@ let containerWidth = 0
 let containerHeight = 0
 let resizeObserver: ResizeObserver | null = null
 
-const bolts = ref<(ProductBolt & { _localId: string; _partsBarcodes?: any[] })[]>([])
+const bolts = ref<BoltState[]>([])
 let nextBoltNum = 1
 
 const boltDialog = ref<InstanceType<typeof BoltPropertyDialog>>()
@@ -308,7 +308,7 @@ function onCanvasDblClick(e: MouseEvent) {
     angleMin: undefined,
     angleMax: undefined,
     armLocation: undefined,
-  } as ProductBolt & { _localId: string; _partsBarcodes?: any[] }
+  } as BoltState
   bolts.value.push(b)
   editingBoltIdx.value = bolts.value.length - 1
   renderCanvas()
@@ -348,23 +348,23 @@ function onBoltClick(idx: number) {
   boltDialog.value?.open(bolts.value[idx], bolts.value[idx].boltSerialNum, hasProductTrace.value)
 }
 
-function onBoltDialogSync(data: any) {
+function onBoltDialogSync(data: BoltDialogData) {
   if (editingBoltIdx.value !== null) {
-    bolts.value[editingBoltIdx.value]._partsBarcodes = data.partsBarcodes
+    bolts.value[editingBoltIdx.value]._partsBarcode = data.partsBarcode ?? undefined
     syncToParent()
   }
 }
 
-function onBoltDialogOk(data: any) {
+function onBoltDialogOk(data: BoltDialogData) {
   if (editingBoltIdx.value === null) return
   const bolt = bolts.value[editingBoltIdx.value]
-  bolt.parameterSetId = data.parameterSetId
+  bolt.parameterSetId = data.parameterSetId ?? undefined
   bolt.armLocation = data.armLocation || undefined
-  bolt.torqueMin = data.torqueMin
-  bolt.torqueMax = data.torqueMax
-  bolt.angleMin = data.angleMin
-  bolt.angleMax = data.angleMax
-  bolt._partsBarcodes = data.partsBarcodes
+  bolt.torqueMin = data.torqueMin ?? undefined
+  bolt.torqueMax = data.torqueMax ?? undefined
+  bolt.angleMin = data.angleMin ?? undefined
+  bolt.angleMax = data.angleMax ?? undefined
+  bolt._partsBarcode = data.partsBarcode ?? undefined
   editingBoltIdx.value = null
   syncToParent()
 }
@@ -384,52 +384,29 @@ const hasProductTrace = computed(() => props.barcodeRules.some(r => r.ruleType =
 // ── Export ──
 
 function getBoltData() {
-  return bolts.value.map(b => ({
-    id: b.id,
-    boltSerialNum: b.boltSerialNum,
-    parameterSetId: b.parameterSetId,
-    torqueMin: b.torqueMin,
-    torqueMax: b.torqueMax,
-    angleMin: b.angleMin,
-    angleMax: b.angleMax,
-    armLocation: b.armLocation,
-    locationXPercent: b.locationXPercent,
-    locationYPercent: b.locationYPercent,
-    partsBarcodes: (b._partsBarcodes ?? []).map((pb: any) => ({
-      id: pb.id,
-      barCodeMatchingRuleId: pb.barCodeMatchingRuleId,
-      barcodeRuleRef: pb.barcodeRuleRef,
-    })),
-  }))
-}
-
-function getPartsBarcodeRules(): Array<{
-  id?: number
-  name: string
-  ruleType: number
-  expectedLength?: number | null
-  segments?: string
-  clientRef: string
-}> {
-  const rules: Array<{
-    id?: number
-    name: string
-    ruleType: number
-    expectedLength?: number | null
-    segments?: string
-    clientRef: string
-  }> = []
-  for (const bolt of bolts.value) {
-    if ((bolt as any)._partsBarcodes) {
-      for (const pb of (bolt as any)._partsBarcodes) {
-        // Only include new rules (not yet saved — no barCodeMatchingRuleId from backend)
-        if (pb._ruleDef && !pb.barCodeMatchingRuleId) {
-          rules.push(pb._ruleDef)
-        }
-      }
+  return bolts.value.map(b => {
+    const pb = b._partsBarcode
+    return {
+      id: b.id,
+      boltSerialNum: b.boltSerialNum,
+      parameterSetId: b.parameterSetId,
+      torqueMin: b.torqueMin,
+      torqueMax: b.torqueMax,
+      angleMin: b.angleMin,
+      angleMax: b.angleMax,
+      armLocation: b.armLocation,
+      locationXPercent: b.locationXPercent,
+      locationYPercent: b.locationYPercent,
+      partsBarcode: pb ? {
+        ...(pb._ruleDef?.id == null ? { barcodeRuleRef: pb.barcodeRuleRef } : {}),
+        barcodeRule: pb._ruleDef ? (
+          pb._ruleDef.id != null
+            ? { id: pb._ruleDef.id, name: pb._ruleDef.name, ruleType: pb._ruleDef.ruleType, expectedLength: pb._ruleDef.expectedLength, segments: pb._ruleDef.segments }
+            : pb._ruleDef
+        ) : undefined,
+      } : undefined,
     }
-  }
-  return rules
+  })
 }
 
 async function loadSide(_sideId: number, imageBlob?: Blob) {
@@ -437,11 +414,12 @@ async function loadSide(_sideId: number, imageBlob?: Blob) {
   if (imageBlob) await loadImageFromBlob(imageBlob)
 }
 
-function setBolts(list: ProductBolt[]) {
+function setBolts(list: BoltState[]) {
   bolts.value = list.map(b => ({
     ...b,
     _localId: generateUUID(),
-    _partsBarcodes: (b as any)._partsBarcodes ?? [],
+    _partsBarcode: b._partsBarcode
+      ?? (b.partsBarcode ? { ...b.partsBarcode, _ruleDef: b.partsBarcode.barcodeRule ?? null, name: b.partsBarcode.barcodeRule?.name ?? '' } : undefined),
   }))
   nextBoltNum = bolts.value.length + 1
   if (imageLoaded.value) renderCanvas()
@@ -464,7 +442,6 @@ function isDirtyAndUncropped(): boolean {
 
 defineExpose({
   getBoltData,
-  getPartsBarcodeRules,
   loadSide,
   setBolts,
   isDirtyAndUncropped,
