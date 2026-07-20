@@ -9,7 +9,7 @@ import RadioButton from 'primevue/radiobutton'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import { fetchPrerequisites, fetchMissions, fetchBarcodeRules } from '@/shared/api/mission'
-import type { MissionPrerequisite, ProductMission, BarCodeMatchingRule } from '@/shared/types/mission'
+import type { MissionPrerequisite, ProductMission, BarCodeMatchingRule, PrerequisiteSaveItem } from '@/shared/types/mission'
 
 const props = defineProps<{
   missionId: number | null
@@ -203,14 +203,8 @@ function onRemoveMaterialPair(index: number) {
 
 // ---- save ----
 
-function getData(): Array<{
-  id?: number
-  prerequisiteMissionId: number
-  prerequisiteType: number
-  barcodeRuleId?: number
-  barcodeRuleRef?: string
-}> {
-  const result: Array<Record<string, unknown>> = []
+function getData(): PrerequisiteSaveItem[] {
+  const result: PrerequisiteSaveItem[] = []
   if (prereq.value) {
     result.push({
       prerequisiteMissionId: prereq.value.prerequisiteMissionId,
@@ -254,7 +248,7 @@ onMounted(async () => {
         <Button
           icon="pi pi-plus" size="small" severity="secondary" text
           :label="String(t('mission.edit.prereq.add'))"
-          @click="openDialog"
+          @click="openDialog()"
         />
       </div>
 
@@ -292,7 +286,7 @@ onMounted(async () => {
           <Button
             icon="pi pi-plus" size="small" severity="secondary" text
             :label="String(t('mission.edit.prereq.add'))"
-            @click="openDialog"
+            @click="openDialog()"
           />
         </div>
       </div>

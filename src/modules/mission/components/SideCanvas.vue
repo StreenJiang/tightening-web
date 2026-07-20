@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
-import type { ProductBolt, BarCodeMatchingRule, BoltState, ProductBoltSaveItem, BoltDialogData } from '@/shared/types/mission'
+import type { ProductBolt, BarCodeMatchingRule, BoltState, BoltDialogData, SideCanvasSyncData } from '@/shared/types/mission'
 import { generateUUID } from '@/shared/utils/uuid'
 import BoltPropertyDialog from './BoltPropertyDialog.vue'
 
@@ -12,7 +12,7 @@ const props = defineProps<{
   sideId: number | null
   clientRef: string
   barcodeRules: BarCodeMatchingRule[]
-  onSync?: (data: { imageBlob: Blob | null; bolts: ProductBoltSaveItem[] }) => void
+  onSync?: (data: SideCanvasSyncData) => void
 }>()
 
 const { t } = useI18n()
@@ -20,7 +20,6 @@ const toast = useToast()
 
 const containerRef = ref<HTMLDivElement>()
 const canvasRef = ref<HTMLCanvasElement>()
-const overlayRef = ref<HTMLDivElement>()
 const fileInput = ref<HTMLInputElement>()
 
 const imageLoaded = ref(false)
@@ -28,7 +27,6 @@ const imageLoading = ref(false)
 const imageError = ref(false)
 
 let originalImage: HTMLImageElement | null = null
-let originalFile: File | null = null
 let cachedImageBlob: Blob | null = null   // for reopen persistence
 let croppedConfirmed = true                // starts clean; markDirty() sets to false
 let originalWidth = 0
@@ -180,7 +178,6 @@ function onFileSelected(e: Event) {
     toast.add({ severity: 'warn', summary: '警告', detail: t('mission.edit.side.uploadImage') + ' 不能超过 5MB', life: 3000 })
     return
   }
-  originalFile = file
   markDirty()
   loadImageFromBlob(file)
 }
@@ -480,7 +477,7 @@ onBeforeUnmount(() => {
         @mouseup="onCanvasMouseUp"
         @mouseleave="onCanvasMouseUp"
       />
-      <div ref="overlayRef" class="bolt-overlay">
+      <div class="bolt-overlay">
         <div
           v-for="(bolt, idx) in bolts"
           :key="bolt._localId"

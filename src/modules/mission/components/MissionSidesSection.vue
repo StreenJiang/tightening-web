@@ -7,8 +7,8 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import SideCanvas from './SideCanvas.vue'
 import { generateUUID } from '@/shared/utils/uuid'
-import { boltStateToSaveItem } from '@/shared/utils/mission'
-import type { BarCodeMatchingRule, ProductSideSaveItem, BoltState, ProductBoltSaveItem } from '@/shared/types/mission'
+import { boltStateToSaveItem, saveItemToBoltState } from '@/shared/utils/mission'
+import type { BarCodeMatchingRule, ProductSideSaveItem, BoltState, SideCanvasSyncData } from '@/shared/types/mission'
 
 interface SideState {
   id?: number
@@ -65,10 +65,11 @@ function closeDialog() {
   editingIndex.value = null
 }
 
-async function onSideSync(clientRef: string, data: { imageBlob: Blob | null; bolts: ProductBoltSaveItem[] }) {
+async function onSideSync(clientRef: string, data: SideCanvasSyncData) {
   const idx = _sides.value.findIndex(s => s.clientRef === clientRef)
   if (idx === -1) return
-  _sides.value[idx].bolts = data.bolts as unknown as BoltState[]
+  const localIdBySerial = new Map(_sides.value[idx].bolts.map(b => [b.serialNum, b._localId]))
+  _sides.value[idx].bolts = data.bolts.map(item => saveItemToBoltState(item, localIdBySerial.get(item.serialNum)))
   props.onTouch?.()
   if (data.imageBlob) {
     const b64 = await blobToBase64(data.imageBlob)
@@ -170,7 +171,7 @@ function loadFromMissionDetail() {
 function getSidesData(): ProductSideSaveItem[] {
   return _sides.value.map(s => ({
     id: s.id, name: s.name,
-    bolts: s.canvasRef?.getBoltData() ?? s.bolts.map(boltStateToSaveItem),
+    bolts: s.bolts.map(boltStateToSaveItem),
     image: s.imageBase64,
     renderedImage: s.imageBase64,
     thumbnail: s.thumbnailBase64,
@@ -214,7 +215,7 @@ defineExpose({ getSidesData, loadFromMissionDetail })
     @update:visible="onDialogVisibleChange" @show="onDialogOpened">
     <SideCanvas v-for="(s, i) in _sides" :key="s.clientRef" :ref="getCanvasRefSetter(i)"
       v-show="editingIndex === i" :side-id="s.id ?? null" :client-ref="s.clientRef"
-      :barcode-rules="barcodeRules" :on-sync="(d: { imageBlob: Blob | null; bolts: ProductBoltSaveItem[] }) => onSideSync(s.clientRef, d)" />
+      :barcode-rules="barcodeRules" :on-sync="(d: SideCanvasSyncData) => onSideSync(s.clientRef, d)" />
   </Dialog>
 </template>
 

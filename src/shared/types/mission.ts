@@ -119,6 +119,26 @@ export interface Segment {
 }
 
 /** 统一保存 payload，映射 ProductMissionSaveDTO */
+
+export interface PrerequisiteSaveItem {
+  id?: number
+  prerequisiteMissionId: number
+  prerequisiteType: number
+  barcodeRuleId?: number       // 已有规则的真实 ID
+  barcodeRuleRef?: string      // 新规则的 clientRef UUID
+}
+
+export interface BarcodeRuleSaveItem {
+  id?: number
+  name: string
+  ruleType: number
+  partNumber?: string
+  expectedLength?: number | null
+  segments: string // JSON string
+  seq?: number       // 物料码序号
+  clientRef?: string // 前端 UUID，新规则关联用
+}
+
 export interface ProductMissionSavePayload {
   id?: number
   name: string
@@ -130,27 +150,18 @@ export interface ProductMissionSavePayload {
   isInspection: number
   inspectionScope: number
   inspectionBoundMissionIds: number[]
-  prerequisites: Array<{
-    id?: number
-    prerequisiteMissionId: number
-    prerequisiteType: number
-    barcodeRuleId?: number       // 已有规则的真实 ID
-    barcodeRuleRef?: string      // 新规则的 clientRef UUID
-  }>
-  barcodeRules: Array<{
-    id?: number
-    name: string
-    ruleType: number
-    partNumber?: string
-    expectedLength?: number | null
-    segments: string // JSON string
-    seq?: number       // 物料码序号
-    clientRef?: string // 前端 UUID，新规则关联用
-  }>
+  prerequisites: PrerequisiteSaveItem[]
+  barcodeRules: BarcodeRuleSaveItem[]
   sides: ProductSideSaveItem[]
 }
 
 // ===== Side/Bolt Save Items =====
+
+/** SideCanvas → 父组件同步数据 */
+export interface SideCanvasSyncData {
+  imageBlob: Blob | null
+  bolts: ProductBoltSaveItem[]
+}
 
 export interface ProductSideSaveItem {
   id?: number

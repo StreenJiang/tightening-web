@@ -1,4 +1,5 @@
 import type { BoltState, ProductBoltSaveItem } from '@/shared/types/mission'
+import { generateUUID } from '@/shared/utils/uuid'
 
 /** BoltState → ProductBoltSaveItem，供 SideCanvas.getBoltData() 和 MissionSidesSection 回退路径共用 */
 export function boltStateToSaveItem(b: BoltState): ProductBoltSaveItem {
@@ -23,4 +24,27 @@ export function boltStateToSaveItem(b: BoltState): ProductBoltSaveItem {
       ) : undefined,
     } : undefined,
   }
+}
+
+/** ProductBoltSaveItem → BoltState（逆向转换），供 onSideSync 将 canvas 同步数据转回 UI 格式 */
+export function saveItemToBoltState(item: ProductBoltSaveItem, existingLocalId?: string): BoltState {
+  const spb = item.partsBarcode
+  const rule = spb?.barcodeRule
+  return {
+    ...item,
+    _localId: existingLocalId ?? generateUUID(),
+    _partsBarcode: spb ? {
+      id: spb.id,
+      barcodeRuleRef: spb.barcodeRuleRef,
+      name: rule?.name ?? '',
+      _ruleDef: rule ? {
+        id: rule.id,
+        name: rule.name,
+        ruleType: rule.ruleType,
+        expectedLength: rule.expectedLength ?? null,
+        segments: rule.segments,
+        clientRef: rule.clientRef,
+      } : null,
+    } : undefined,
+  } as BoltState
 }

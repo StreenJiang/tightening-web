@@ -57,6 +57,10 @@ src/
   - API 边界（`JSON.parse` 返回值）无法避免时，用 `unknown` 并做类型守卫。
   - 模板 `ref` 回调参数可用 `unknown` + `as` 断言。
   - UI 层内部状态（如 `_partsBarcode`）必须定义专用 interface，不允许用 `any` 或内联交叉类型。
+
+- **禁止 `as unknown as SomeType` 多级类型断言**。这类断言完全绕过类型检查，等价于隐式 `any`。
+  - 所有数据结构必须定义明确的 `interface`，而不是用 `Record<string, unknown>` 或泛型 map 替代。
+  - 跨边界数据（API 响应、组件间 sync 回调、localStorage 读写）必须用 **Zod / Yup / Valibot** 做运行时校验，推荐 Valibot（tree-shakeable，体积小）。校验通过的 data 直接获得正确的 TypeScript 类型，无需任何 `as` 断言。
 - 接口定义统一放在 `src/shared/types/` 目录下。
 
 ## 当前状态
