@@ -98,20 +98,25 @@ async function generateThumb(b64: string, side: SideState) {
   const blob = base64ToBlob(b64)
   const img = new Image()
   const url = URL.createObjectURL(blob)
-  await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(); img.src = url })
-  URL.revokeObjectURL(url)
+  try {
+    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(); img.src = url })
+  } finally {
+    URL.revokeObjectURL(url)
+  }
   const c = document.createElement('canvas')
   const maxW = 240, maxH = 180
   const s = Math.min(maxW / img.width, maxH / img.height)
   c.width = Math.round(img.width * s); c.height = Math.round(img.height * s)
   const ctx = c.getContext('2d')!
-  ctx.fillStyle = '#e5e5e5'; ctx.fillRect(0, 0, c.width, c.height)  // light gray bg
+  ctx.fillStyle = '#e5e5e5'; ctx.fillRect(0, 0, c.width, c.height)
   ctx.drawImage(img, 0, 0, c.width, c.height)
   const tb = await new Promise<Blob | null>(resolve => c.toBlob(b => resolve(b), 'image/jpeg', 0.85))
+  // 清理临时 DOM 对象
+  c.width = 0; c.height = 0
+  img.src = ''
   if (tb) {
     if (side.thumbnailUrl) URL.revokeObjectURL(side.thumbnailUrl)
     side.thumbnailUrl = URL.createObjectURL(tb)
-    // Also store as Base64 for save payload
     const reader = new FileReader()
     reader.onloadend = () => { side.thumbnailBase64 = (reader.result as string).split(',')[1] }
     reader.readAsDataURL(tb)
@@ -140,7 +145,6 @@ function addSide() {
 }
 
 function removeSide(idx: number) {
-  if (_sides.value.length <= 1) return
   const name = _sides.value[idx].name
   confirm.require({
     header: t('mission.edit.side.title'),
@@ -203,7 +207,7 @@ defineExpose({ getSidesData, loadFromMissionDetail })
             <i v-else class="pi pi-image thumb-placeholder" />
           </div>
           <div class="side-name">{{ side.name }}</div>
-          <Button v-if="_sides.length > 1" icon="pi pi-times" severity="secondary" text rounded class="side-remove" @click.stop="removeSide(idx)" />
+          <Button icon="pi pi-times" severity="secondary" text rounded class="side-remove" @click.stop="removeSide(idx)" />
         </div>
       </div>
     </template>

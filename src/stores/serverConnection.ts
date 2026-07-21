@@ -31,7 +31,7 @@ export const useServerConnectionStore = defineStore('serverConnection', () => {
     status.value = 'loading'
     try {
       if (!API_BASE) {
-        // Mock: 模拟远程服务器连接成功，延迟 3s 以便观察"连接中"状态
+        // TODO: 替换为真实 API 调用，等远程服务端 module 开发完成后移除 mock 逻辑
         await new Promise(r => setTimeout(r, MOCK_DELAY))
         status.value = 'connected'
         address.value = '192.168.1.100:8080'
@@ -46,11 +46,9 @@ export const useServerConnectionStore = defineStore('serverConnection', () => {
       address.value = data.address
       latency.value = data.latency
       errorReason.value = data.errorReason
-    } catch {
-      status.value = 'unconfigured'
-      address.value = ''
-      latency.value = null
-      errorReason.value = ''
+    } catch (e) {
+      status.value = 'disconnected'
+      errorReason.value = e instanceof Error ? e.message : '连接失败'
     }
   }
 
@@ -66,6 +64,7 @@ export const useServerConnectionStore = defineStore('serverConnection', () => {
 
   async function testConnection(addr: string): Promise<{ success: boolean; errorReason: string }> {
     if (!API_BASE) {
+      // TODO: 替换为真实 API 调用，等远程服务端 module 开发完成后移除 mock 逻辑
       await new Promise(r => setTimeout(r, 1500))
       return { success: true, errorReason: '' }
     }

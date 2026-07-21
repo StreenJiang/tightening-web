@@ -91,7 +91,7 @@ async function validateName() {
     return
   }
   if (name.length > 50) {
-    nameError.value = '名称不能超过50个字符'
+    nameError.value = t('mission.edit.nameTooLong')
     return
   }
   nameChecking.value = true

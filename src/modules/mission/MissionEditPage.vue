@@ -11,6 +11,8 @@ import Breadcrumb from 'primevue/breadcrumb'
 import Tag from 'primevue/tag'
 import Skeleton from 'primevue/skeleton'
 import { generateUUID } from '@/shared/utils/uuid'
+import { formatDateTime } from '@/shared/utils/date'
+import { createLogger } from '@/shared/utils/logger'
 import { fetchMission, saveMission, baseFields, cacheDetail } from '@/shared/api/mission'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -30,6 +32,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const log = createLogger('MissionEdit')
 const confirm = useConfirm()
 
 const id = route.params.id ? Number(route.params.id) : null
@@ -60,7 +63,6 @@ const externalBarcodeRules = computed(() => barcodeCard.value?.localRules ?? [])
 const boundMaterialCodeIds = computed<number[]>(() => prereqCard.value?.getBoundBarcodeRuleIds?.() ?? [])
 
 let snapshot = ''
-let leavingConfirmed = false
 
 onMounted(async () => {
   if (isEdit && id) {
@@ -125,8 +127,6 @@ onMounted(async () => {
   await nextTick()
   if (isEdit && id) {
     sidesSection.value?.loadFromMissionDetail()
-  } else if (!form.value._sides?.length) {
-    form.value._sides = [{ name: '面-1', clientRef: generateUUID(), bolts: [] }]
   }
 })
 
@@ -166,11 +166,7 @@ async function handleSave(draft = false) {
   }
   if (isEdit && id) payload.id = id
 
-  console.log('=== SAVE PAYLOAD ===', JSON.stringify(payload, (key, val) =>
-    key === 'image' || key === 'renderedImage' || key === 'thumbnail'
-      ? (typeof val === 'string' && val.length > 100 ? `[BASE64:${val.length}chars]` : val)
-      : val
-  , 2))
+  log.debug('保存 payload', payload)
 
   if (draft) savingDraft.value = true
   else saving.value = true
@@ -218,25 +214,11 @@ async function handleSave(draft = false) {
   } finally { saving.value = false; savingDraft.value = false }
 }
 
-async function handleBack() {
-  if (isDirty()) {
-    confirm.require({
-      header: t('mission.edit.unsavedTitle'),
-      message: t('mission.edit.unsavedMessage'),
-      rejectLabel: t('mission.edit.unsavedStay'),
-      acceptLabel: t('mission.edit.unsavedLeave'),
-      accept: () => {
-        leavingConfirmed = true
-        router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
-      },
-    })
-  } else {
-    router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
-  }
+function handleBack() {
+  router.push({ path: '/mission', query: { page: route.query.page, name: route.query.name } })
 }
 
 onBeforeRouteLeave(async (_to, _from) => {
-  if (leavingConfirmed) return
   if (isDirty()) {
     const leave = await new Promise<boolean>((resolve) => {
       confirm.require({
@@ -257,11 +239,6 @@ const title = computed(() =>
     ? t('mission.edit.editTitle', { name: form.value.name })
     : t('mission.edit.createTitle'),
 )
-
-function formatDateTime(iso?: string): string {
-  if (!iso) return ''
-  return iso.slice(0, 19).replace('T', ' ')
-}
 
 const metaItems = computed(() => {
   const items: { label: string; value: string }[] = []

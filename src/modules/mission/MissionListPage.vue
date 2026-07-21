@@ -25,7 +25,7 @@ let gridResizeObserver: ResizeObserver | null = null
 let gridRafId: number | null = null
 
 const searchInput = ref('')
-let searchTimer: ReturnType<typeof setTimeout>
+let searchTimer: number
 
 const ROWS_PER_PAGE = [10, 20, 50]
 const dataviewPt = {
@@ -109,7 +109,7 @@ function goToEdit(mission: ProductMission) {
 
 async function handleDelete(mission: ProductMission) {
   confirm.require({
-    header: t('mission.list.deleteConfirm', { name: mission.name }),
+    header: t('mission.list.action.delete'),
     message: t('mission.delete.confirm', { name: mission.name }),
     acceptLabel: t('mission.list.action.delete'),
     rejectLabel: t('common.close'),
@@ -147,7 +147,7 @@ function inspectionLabel(m: ProductMission): string {
 
     <!-- Skeleton -->
     <div v-if="store.loading" class="skeleton-list">
-      <div v-for="n in 5" :key="n" class="skeleton-card">
+      <div v-for="n in Math.min(store.pagination.size, 8)" :key="n" class="skeleton-card">
         <div class="sk-thumb" />
         <div class="sk-body">
           <div class="sk-line wide" />

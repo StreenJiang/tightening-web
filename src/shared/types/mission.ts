@@ -42,8 +42,9 @@ export interface BoltDeviceBinding {
 export interface BoltPartsBarcode {
   id?: number
   barcodeRuleRef?: string
-  barCodeMatchingRuleId?: number // GET 响应中返回，用于关联已有条码规则
   barcodeRule?: BarCodeMatchingRule
+  /** 前端 fallback：当 barcodeRule 为空时，通过此 ID 从 barcodeRules 列表查找，后端 DTO 中不含此字段 */
+  barCodeMatchingRuleId?: number
 }
 
 export interface ProductBolt {
@@ -189,10 +190,5 @@ export interface ProductBoltSaveItem {
   locationYPercent: number
   enabled?: number
   deviceBindings?: BoltDeviceBinding[]
-  partsBarcode?: {
-    id?: number
-    barcodeRuleRef?: string
-    barCodeMatchingRuleId?: number // GET 响应中返回
-    barcodeRule?: BarCodeMatchingRule
-  }
+  partsBarcode?: BoltPartsBarcode
 }

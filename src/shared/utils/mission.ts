@@ -1,5 +1,14 @@
-import type { BoltState, ProductBoltSaveItem } from '@/shared/types/mission'
+import type { BoltState, ProductBoltSaveItem, Segment } from '@/shared/types/mission'
 import { generateUUID } from '@/shared/utils/uuid'
+
+/** 解析 API 格式 (0-based exclusive) 的 segments JSON → UI 格式 (1-based inclusive) */
+export function parseSegments(json: string): Segment[] {
+  if (!json) return []
+  try {
+    const arr = JSON.parse(json) as Array<{ s: number; e: number; v: string }>
+    return arr.map(s => ({ s: s.s + 1, e: s.e, v: s.v }))
+  } catch { return [] }
+}
 
 /** BoltState → ProductBoltSaveItem，供 SideCanvas.getBoltData() 和 MissionSidesSection 回退路径共用 */
 export function boltStateToSaveItem(b: BoltState): ProductBoltSaveItem {

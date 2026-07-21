@@ -488,19 +488,19 @@ onBeforeUnmount(() => {
     <!-- Toolbar -->
     <div v-if="imageLoaded" class="canvas-toolbar">
       <div class="tb-group">
-        <Button icon="pi pi-search-plus" severity="secondary" text rounded class="tb-btn" v-tooltip="'放大'" @click="zoomIn" />
-        <Button icon="pi pi-search-minus" severity="secondary" text rounded class="tb-btn" v-tooltip="'缩小'" @click="zoomOut" />
-        <Button icon="pi pi-arrow-up" severity="secondary" text rounded class="tb-btn" v-tooltip="'上移'" @click="pan(0, -40)" />
-        <Button icon="pi pi-arrow-down" severity="secondary" text rounded class="tb-btn" v-tooltip="'下移'" @click="pan(0, 40)" />
-        <Button icon="pi pi-arrow-left" severity="secondary" text rounded class="tb-btn" v-tooltip="'左移'" @click="pan(-40, 0)" />
-        <Button icon="pi pi-arrow-right" severity="secondary" text rounded class="tb-btn" v-tooltip="'右移'" @click="pan(40, 0)" />
+        <Button icon="pi pi-search-plus" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.zoomIn')" @click="zoomIn" />
+        <Button icon="pi pi-search-minus" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.zoomOut')" @click="zoomOut" />
+        <Button icon="pi pi-arrow-up" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.panUp')" @click="pan(0, -40)" />
+        <Button icon="pi pi-arrow-down" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.panDown')" @click="pan(0, 40)" />
+        <Button icon="pi pi-arrow-left" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.panLeft')" @click="pan(-40, 0)" />
+        <Button icon="pi pi-arrow-right" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.panRight')" @click="pan(40, 0)" />
       </div>
       <div class="tb-group">
-        <Button icon="pi pi-replay" severity="secondary" text rounded class="tb-btn" v-tooltip="'左旋'" @click="rotateLeft" />
-        <Button icon="pi pi-refresh" severity="secondary" text rounded class="tb-btn" v-tooltip="'右旋'" @click="rotateRight" />
-        <Button icon="pi pi-expand" severity="secondary" text rounded class="tb-btn" v-tooltip="'裁剪'" @click="doCrop" />
-        <Button icon="pi pi-sync" severity="secondary" text rounded class="tb-btn" v-tooltip="'重置'" @click="handleReset" />
-        <Button icon="pi pi-upload" severity="secondary" text rounded class="tb-btn" v-tooltip="'替换图片'" @click="triggerUpload" />
+        <Button icon="pi pi-replay" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.rotateLeft')" @click="rotateLeft" />
+        <Button icon="pi pi-refresh" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.rotateRight')" @click="rotateRight" />
+        <Button icon="pi pi-expand" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.crop')" @click="doCrop" />
+        <Button icon="pi pi-sync" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.reset')" @click="handleReset" />
+        <Button icon="pi pi-upload" severity="secondary" text rounded class="tb-btn" v-tooltip="t('mission.edit.side.toolbar.replaceImage')" @click="triggerUpload" />
       </div>
     </div>
 

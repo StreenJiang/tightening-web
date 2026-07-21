@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 开发者背景
+
+本项目的 Vue/TypeScript 开发人员是 **Java 后端开发出身**，对 Vue 只有基础了解。生成代码时注意：
+
+- 在 Vue Composition API 中，`setup` 闭包 ≈ Java 实例作用域，模块级变量会跨组件实例共享——这是 Java 开发者容易误解的地方
+- `ref`/`reactive` 才是 Vue 的响应式状态，普通 `let` 变量丢失响应式
+- Pinia store 承担类似 Spring Service 的角色——数据获取、缓存、增删改都在 store，组件只负责渲染
+- 函数/类型超过 30 行时解释为什么需要这么长
+
 ## 项目概述
 
 `tightening-web` — 拧紧流程控制前端，Vue 3 + TypeScript + Vite，运行在 N2840 工控机（4GB DDR3，1024×768 触摸屏）。任务管理（Mission）模块已实现完整的 CRUD，包括 Stage 3 产品面/螺栓编辑（Canvas + Dialog UI）。
@@ -53,9 +62,9 @@ src/
 
 ## PrimeVue 使用规范
 
-- 所有 UI 组件统一使用 **PrimeVue v4 styled 模式**（非 unstyled）
+- 所有 **交互控件**（Button、InputText、Dialog、Select、ToggleSwitch 等）统一使用 PrimeVue 组件
 - 组件微调优先级：**pt 属性 > Design Token（theme preset） > 原生 props（severity/size/variant） > scoped CSS**
-- 只有 PrimeVue 原生方式无法实现时，才使用 scoped CSS
+- **自定义内容渲染**（Canvas 绘图、JSON 树、代码块、自定义布局）可用原生 HTML + scoped CSS + PrimeIcons 图标
 - ripple 全局关闭（`ripple: false`），暗色模式通过 `.dark` class 切换
 
 ## API 层架构

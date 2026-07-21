@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import Toolbar from 'primevue/toolbar'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
+import { formatDateTime } from '@/shared/utils/date'
 
 const { t } = useI18n()
 
@@ -19,16 +20,8 @@ onMounted(() => {
 })
 onUnmounted(() => clearInterval(timer))
 
-function formatTime(d: Date): string {
-  const mo = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const h = String(d.getHours()).padStart(2, '0')
-  const mi = String(d.getMinutes()).padStart(2, '0')
-  const s = String(d.getSeconds()).padStart(2, '0')
-  return `${d.getFullYear()}-${mo}-${day} ${h}:${mi}:${s}`
-}
-
 const deviceGroups: DeviceGroup[] = [
+  // TODO: 替换为真实设备状态 API，当前为 UI 占位数据
   {
     icon: 'pi pi-wrench', label: '拧紧枪',
     instances: [
@@ -92,7 +85,7 @@ function closeModal() {
 <template>
   <Toolbar class="footer">
     <template #start>
-      <span class="footer-time">{{ formatTime(now) }}</span>
+      <span class="footer-time">{{ formatDateTime(now) }}</span>
     </template>
     <template #end>
       <div class="footer-devices">
@@ -159,10 +152,10 @@ function closeModal() {
 }
 
 .footer-devices :deep(.p-button) {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--p-surface-200);
 }
 html.dark .footer-devices :deep(.p-button) {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--p-surface-800);
 }
 
 .footer-time {

@@ -97,7 +97,7 @@
       "unsavedMessage": "Unsaved changes will be lost. Leave?",
       "unsavedLeave": "Leave",
       "unsavedStay": "Stay",
-      "nameDuplicate": "Mission name already exists", "nameRequired": "Mission name is required", "scopeRequired": "Inspection scope is required",
+      "nameDuplicate": "Mission name already exists", "nameRequired": "Mission name is required", "nameTooLong": "Name cannot exceed 50 characters", "scopeRequired": "Inspection scope is required",
       "saveSuccess": "Saved successfully", "saveFailed": "Save failed",
       "loadFailed": "Failed to load mission",
       "inspectionDialogTitle": "Inspection Config",
@@ -162,7 +162,13 @@
         "noImage": "No product side image",
         "doubleClickHint": "Double-click on the image to place a bolt",
         "loadingImage": "Loading image...",
-        "loadImageFailed": "Failed to load image"
+        "loadImageFailed": "Failed to load image",
+        "toolbar": {
+          "zoomIn": "Zoom In", "zoomOut": "Zoom Out",
+          "panUp": "Pan Up", "panDown": "Pan Down", "panLeft": "Pan Left", "panRight": "Pan Right",
+          "rotateLeft": "Rotate Left", "rotateRight": "Rotate Right",
+          "crop": "Crop", "reset": "Reset", "replaceImage": "Replace Image"
+        }
       },
       "bolt": {
         "dialogEditTitle": "Edit Bolt — {num}",
@@ -181,6 +187,8 @@
         "addMaterialBarcode": "Add Material Barcode",
         "needProductFirst": "Must configure a product trace rule first",
         "psetNegative": "PSet cannot be negative",
+        "torqueNegative": "Torque cannot be negative",
+        "angleNegative": "Angle cannot be negative",
         "torqueRangeInvalid": "Torque min cannot exceed torque max",
         "angleRangeInvalid": "Angle min cannot exceed angle max",
         "dialogOk": "OK",

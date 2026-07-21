@@ -97,7 +97,7 @@
       "unsavedMessage": "有未保存的更改，确定离开？",
       "unsavedLeave": "离开",
       "unsavedStay": "继续编辑",
-      "nameDuplicate": "任务名称已存在", "nameRequired": "请输入任务名称", "scopeRequired": "点检任务必须选择检查范围",
+      "nameDuplicate": "任务名称已存在", "nameRequired": "请输入任务名称", "nameTooLong": "名称不能超过50个字符", "scopeRequired": "点检任务必须选择检查范围",
       "saveSuccess": "保存成功", "saveFailed": "保存失败",
       "loadFailed": "加载任务失败",
       "inspectionDialogTitle": "点检配置",
@@ -162,7 +162,13 @@
         "noImage": "暂无产品面图片",
         "doubleClickHint": "双击图片创建螺栓点位",
         "loadingImage": "图片加载中...",
-        "loadImageFailed": "图片加载失败"
+        "loadImageFailed": "图片加载失败",
+        "toolbar": {
+          "zoomIn": "放大", "zoomOut": "缩小",
+          "panUp": "上移", "panDown": "下移", "panLeft": "左移", "panRight": "右移",
+          "rotateLeft": "左旋", "rotateRight": "右旋",
+          "crop": "裁剪", "reset": "重置", "replaceImage": "替换图片"
+        }
       },
       "bolt": {
         "dialogEditTitle": "编辑螺栓 — {num}",
@@ -181,6 +187,8 @@
         "addMaterialBarcode": "添加物料条码",
         "needProductFirst": "必须先配置产品码",
         "psetNegative": "程序号不能为负数",
+        "torqueNegative": "扭矩不能为负数",
+        "angleNegative": "角度不能为负数",
         "torqueRangeInvalid": "扭矩最小值不能大于最大值",
         "angleRangeInvalid": "角度最小值不能大于最大值",
         "dialogOk": "确定",

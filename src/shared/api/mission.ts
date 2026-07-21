@@ -37,6 +37,85 @@ const missionListResponseSchema = v.object({
   current: v.number(),
 })
 
+// ── Detail 响应用嵌套 schema ──
+
+const barcodeRuleRawSchema = v.object({
+  id: v.nullish(v.number()),
+  name: v.string(),
+  ruleType: v.pipe(v.number(), v.minValue(1), v.maxValue(2)),
+  partNumber: v.nullish(v.string()),
+  expectedLength: v.nullish(v.number()),
+  segments: v.string(),
+  seq: v.nullish(v.number()),
+  clientRef: v.nullish(v.string()),
+})
+
+const boltPartsBarcodeRawSchema = v.object({
+  id: v.nullish(v.number()),
+  barcodeRuleRef: v.nullish(v.string()),
+  barcodeRule: v.nullish(barcodeRuleRawSchema),
+})
+
+const boltDeviceBindingRawSchema = v.object({
+  id: v.nullish(v.number()),
+  deviceId: v.nullish(v.number()),
+  deviceRole: v.nullish(v.number()),
+  deviceSpec: v.nullish(v.number()),
+  sortOrder: v.nullish(v.number()),
+})
+
+const productBoltRawSchema = v.object({
+  id: v.nullish(v.number()),
+  serialNum: v.number(),
+  name: v.nullish(v.string()),
+  parameterSetId: v.nullish(v.number()),
+  torqueMin: v.nullish(v.number()),
+  torqueMax: v.nullish(v.number()),
+  angleMin: v.nullish(v.number()),
+  angleMax: v.nullish(v.number()),
+  armLocation: v.nullish(v.string()),
+  locationXPercent: v.number(),
+  locationYPercent: v.number(),
+  enabled: v.nullish(v.number()),
+  deviceBindings: v.nullish(v.array(boltDeviceBindingRawSchema)),
+  partsBarcode: v.nullish(boltPartsBarcodeRawSchema),
+})
+
+const productSideRawSchema = v.object({
+  id: v.nullish(v.number()),
+  name: v.string(),
+  image: v.nullish(v.string()),
+  renderedImage: v.nullish(v.string()),
+  thumbnail: v.nullish(v.string()),
+  bolts: v.nullish(v.array(productBoltRawSchema)),
+})
+
+const prerequisiteRawSchema = v.object({
+  id: v.nullish(v.number()),
+  prerequisiteMissionId: v.number(),
+  prerequisiteType: v.pipe(v.number(), v.minValue(1), v.maxValue(3)),
+  barcodeRuleId: v.nullish(v.number()),
+  barcodeRuleRef: v.nullish(v.string()),
+})
+
+const missionDetailRawSchema = v.object({
+  id: v.nullish(v.number()),
+  name: v.string(),
+  maxNgCount: v.nullable(v.number()),
+  passwordRequiredNgCount: v.nullable(v.number()),
+  enabled: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  multiDeviceIndependent: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  skipScrew: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  isInspection: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  inspectionScope: v.nullish(v.number()),
+  inspectionBoundMissionIds: v.nullish(v.array(v.number())),
+  prerequisites: v.nullish(v.array(prerequisiteRawSchema)),
+  barcodeRules: v.nullish(v.array(barcodeRuleRawSchema)),
+  sides: v.nullish(v.array(productSideRawSchema)),
+  createTime: v.nullish(v.string()),
+  modifyTime: v.nullish(v.string()),
+})
+
 /** API 响应 (0/1 整数) → 前端 boolean，null 值转为 undefined，缺失值给兜底 */
 function fromApi(raw: ProductMissionRaw): ProductMission {
   return {
@@ -83,7 +162,10 @@ export async function fetchMissions(params: MissionQuery) {
 
 /** GET /{id} — 后端现返回 ProductMissionDetailDTO（含 sides + Base64 图片） */
 export async function fetchMission(id: number): Promise<ProductMissionSavePayload> {
-  return get<ProductMissionSavePayload>(`${BASE}/${id}`)
+  const raw = await get<unknown>(`${BASE}/${id}`)
+  const parsed = v.parse(missionDetailRawSchema, raw)
+  // Valibot 已校验结构，schema 与 SavePayload 字段一致（均为后端 DTO 整数格式）
+  return parsed as ProductMissionSavePayload
 }
 
 export function checkName(name: string, excludeId?: number) {

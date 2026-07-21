@@ -7,6 +7,7 @@ import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import { generateUUID } from '@/shared/utils/uuid'
+import { parseSegments } from '@/shared/utils/mission'
 import type { ProductBolt, PartsBarcodeState, BoltDialogData } from '@/shared/types/mission'
 
 const { t } = useI18n()
@@ -71,14 +72,6 @@ function openMatDialog(editExisting = false) {
     segments.value = []
   }
   matVisible.value = true
-}
-
-function parseSegments(json?: string): Array<{ s: number; e: number; v: string }> {
-  if (!json) return []
-  try {
-    const arr = JSON.parse(json) as Array<{ s: number; e: number; v: string }>
-    return arr.map(s => ({ s: s.s + 1, e: s.e, v: s.v }))
-  } catch { return [] }
 }
 
 function isSegLengthMismatch(seg: { s: number; e: number; v: string }): boolean {
@@ -146,11 +139,23 @@ function buildOkData(): BoltDialogData {
 
 // ── OK ──
 
+function rejectNegative(val: number | null, key: string): boolean {
+  if (val != null && val < 0) {
+    toast.add({ severity: 'warn', summary: '警告', detail: t(key), life: 3000 })
+    return true
+  }
+  return false
+}
+
 function onOk() {
   if (pset.value != null && pset.value < 0) {
     toast.add({ severity: 'warn', summary: '警告', detail: t('mission.edit.bolt.psetNegative'), life: 3000 })
     return
   }
+  if (rejectNegative(torqueMin.value, 'mission.edit.bolt.torqueNegative')) return
+  if (rejectNegative(torqueMax.value, 'mission.edit.bolt.torqueNegative')) return
+  if (rejectNegative(angleMin.value, 'mission.edit.bolt.angleNegative')) return
+  if (rejectNegative(angleMax.value, 'mission.edit.bolt.angleNegative')) return
   if (torqueMin.value != null && torqueMax.value != null && torqueMin.value > torqueMax.value) {
     toast.add({ severity: 'warn', summary: '警告', detail: t('mission.edit.bolt.torqueRangeInvalid'), life: 3000 })
     return

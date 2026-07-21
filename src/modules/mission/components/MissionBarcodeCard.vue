@@ -11,6 +11,7 @@ import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Tag from 'primevue/tag'
 import { generateUUID } from '@/shared/utils/uuid'
+import { parseSegments } from '@/shared/utils/mission'
 import { fetchBarcodeRules } from '@/shared/api/mission'
 import type { BarCodeMatchingRule, BarcodeRuleSaveItem, Segment } from '@/shared/types/mission'
 
@@ -31,6 +32,7 @@ const ruleName = ref('')
 const ruleType = ref<1 | 2>(1)
 const expectedLength = ref<number | null>(null)
 const segments = ref<Segment[]>([])
+let tempIdCounter = 0
 
 // 自动递增序号（物料码规则展示用）
 const nextSeq = computed(() => {
@@ -73,15 +75,6 @@ function onClickAdd() {
   expectedLength.value = null
   segments.value = []
   dialogVisible.value = true
-}
-
-function parseSegments(json: string): Segment[] {
-  if (!json) return []
-  try {
-    const arr = JSON.parse(json) as Array<{ s: number; e: number; v: string }>
-    // API 格式 (0-based exclusive) → UI 格式 (1-based inclusive)
-    return arr.map(s => ({ s: s.s + 1, e: s.e, v: s.v }))
-  } catch { return [] }
 }
 
 function openEditDialog(rule: BarCodeMatchingRule) {
@@ -173,9 +166,6 @@ function onDialogOk() {
   }
   dialogVisible.value = false
 }
-
-// 临时 ID 计数器
-let tempIdCounter = 0
 
 function reorderSeq() {
   let seq = 1

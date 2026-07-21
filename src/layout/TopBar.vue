@@ -10,6 +10,7 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
+import LogViewer from './LogViewer.vue'
 
 const { t, locale } = useI18n()
 const sidebar = useSidebarStore()
@@ -18,6 +19,7 @@ const conn = useServerConnectionStore()
 
 const configModalVisible = ref(false)
 const statusModalVisible = ref(false)
+const logVisible = ref(false)
 
 function toggleLocale() {
   locale.value = locale.value === 'zh-CN' ? 'en' : 'zh-CN'
@@ -119,6 +121,11 @@ onMounted(() => conn.fetchStatus())
 
     <template #end>
       <Button
+        icon="pi pi-history"
+        severity="secondary" text rounded
+        @click="logVisible = true"
+      />
+      <Button
         :icon="themeIcon"
         severity="secondary" text rounded
         @click="toggleTheme"
@@ -213,6 +220,8 @@ onMounted(() => conn.fetchStatus())
       />
     </template>
   </Dialog>
+
+  <LogViewer v-model:visible="logVisible" />
 </template>
 
 <style scoped>
